@@ -88,7 +88,11 @@ criterion_group!(
 );
 
 fn main() {
-    std::fs::remove_dir_all("./cache").unwrap();
+    // delete cache directory if it exists
+    // this is to make sure we're benching on a clean slate
+    if let Ok(_) = std::fs::read_dir("./cache") {
+        std::fs::remove_dir_all("./cache").unwrap();
+    }
 
     benches();
 
