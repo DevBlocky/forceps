@@ -6,7 +6,7 @@ description = "An easy-to-use async & on-disk database"
 readme = "README.md"
 repository = "https://github.com/blockba5her/forceps"
 license = "MIT"
-keywords = ["database", "cache", "async", "persistent", "disk", "io"]
+keywords = ["database", "cache", "async", "persistent", "disk"]
 categories = ["asynchronous", "database"]
 edition = "2018"
 
