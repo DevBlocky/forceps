@@ -85,8 +85,11 @@ impl std::error::Error for ForcepError {}
 
 mod tmp;
 
+mod builder;
+pub use builder::CacheBuilder;
+
 mod cache;
-pub use cache::{Cache, CacheBuilder};
+pub use cache::Cache;
 
 mod metadata;
 pub(crate) use metadata::MetaDb;

@@ -17,11 +17,23 @@ async fn tempfile(dir: &path::Path) -> Result<(afs::File, path::PathBuf)> {
     Ok((tmp, tmppath))
 }
 
+#[derive(Debug, Clone)]
+pub(crate) struct Options {
+    pub(crate) path: path::PathBuf,
+    pub(crate) dir_depth: u8,
+    // TODO: implement below option
+    pub(crate) save_last_access: bool,
+
+    // read and write buffer sizes
+    pub(crate) rbuff_sz: usize,
+    pub(crate) wbuff_sz: usize,
+}
+
 /// The main component of `forceps`, acts as the API for interacting with the on-disk API.
 ///
 /// This structure exposes `read`, `write`, and misc metadata operations. `read` and `write` are
 /// both async, whereas all metadata operations are sync. To create this structure, use the
-/// [`CacheBuilder`].
+/// [`CacheBuilder`](crate::CacheBuilder).
 ///
 /// # Examples
 ///
@@ -39,48 +51,33 @@ async fn tempfile(dir: &path::Path) -> Result<(afs::File, path::PathBuf)> {
 #[derive(Debug)]
 pub struct Cache {
     meta: MetaDb,
-    path: path::PathBuf,
-}
-
-/// A builder for the [`Cache`] object. Exposes APIs for configuring the initial setup of the
-/// database.
-///
-/// # Examples
-///
-/// ```rust
-/// use forceps::CacheBuilder;
-///
-/// let builder = CacheBuilder::new("./cache");
-/// ```
-#[derive(Debug, Clone)]
-pub struct CacheBuilder {
-    path: path::PathBuf,
+    opts: Options,
 }
 
 impl Cache {
     /// Creates a new Cache instance based on the CacheBuilder
-    async fn new(builder: CacheBuilder) -> Result<Self> {
+    pub(crate) async fn create(opts: Options) -> Result<Self> {
         // create the base directory for the cache
-        afs::create_dir_all(&builder.path)
+        afs::create_dir_all(&opts.path)
             .await
             .map_err(ForcepError::Io)?;
 
-        let mut meta_path = builder.path.clone();
+        let mut meta_path = opts.path.clone();
         meta_path.push("index");
         Ok(Self {
             meta: MetaDb::new(&meta_path)?,
-            path: builder.path,
+            opts,
         })
     }
 
     /// Creates a PathBuf based on the key provided
     fn path_from_key(&self, key: &[u8]) -> path::PathBuf {
         let hex = hex::encode(key);
-        let mut buf = self.path.clone();
+        let mut buf = self.opts.path.clone();
 
         // push segments of key as paths to the PathBuf. If the hex isn't long enough, then push
         // "__" instead.
-        for n in (0..4usize).step_by(2) {
+        for n in (0..self.opts.dir_depth).map(|x| x as usize * 2) {
             let n_end = n + 2;
             buf.push(if n_end >= hex.len() {
                 "__"
@@ -136,7 +133,7 @@ impl Cache {
         let mut buf = Vec::with_capacity(size_guess as usize);
 
         // read the entire file to the buffer
-        tokio::io::BufReader::new(file)
+        tokio::io::BufReader::with_capacity(self.opts.rbuff_sz, file)
             .read_to_end(&mut buf)
             .await
             .map_err(ForcepError::Io)?;
@@ -170,10 +167,10 @@ impl Cache {
         let key = key.as_ref();
         let value = value.as_ref();
 
-        let (tmp, tmp_path) = tempfile(&self.path).await?;
+        let (tmp, tmp_path) = tempfile(&self.opts.path).await?;
         // write all data to a temporary file
         {
-            let mut writer = tokio::io::BufWriter::new(tmp);
+            let mut writer = tokio::io::BufWriter::with_capacity(self.opts.wbuff_sz, tmp);
             writer.write_all(value).await.map_err(ForcepError::Io)?;
             writer.flush().await.map_err(ForcepError::Io)?;
         }
@@ -217,7 +214,7 @@ impl Cache {
         let key = key.as_ref();
 
         let cur_path = self.path_from_key(key);
-        let tmp_path = crate::tmp::tmppath_in(&self.path);
+        let tmp_path = crate::tmp::tmppath_in(&self.opts.path);
 
         // move then delete the file
         //
@@ -306,71 +303,10 @@ impl Cache {
     }
 }
 
-impl CacheBuilder {
-    /// Creates a new [`CacheBuilder`], which can be used to customize and create a [`Cache`]
-    /// instance.
-    ///
-    /// The `path` supplied is the base directory of the cache instance.
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// use forceps::CacheBuilder;
-    ///
-    /// let builder = CacheBuilder::new("./cache");
-    /// // Use other methods for configuration
-    /// ```
-    pub fn new<P: AsRef<path::Path>>(path: P) -> Self {
-        CacheBuilder {
-            path: path.as_ref().to_owned(),
-        }
-    }
-
-    /// Builds the new [`Cache`] instance using the configured options of the builder.
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// # #[tokio::main(flavor = "current_thread")]
-    /// # async fn main() {
-    /// use forceps::CacheBuilder;
-    ///
-    /// let cache = CacheBuilder::new("./cache")
-    ///     .build()
-    ///     .await
-    ///     .unwrap();
-    /// # }
-    /// ```
-    pub async fn build(self) -> Result<Cache> {
-        Cache::new(self).await
-    }
-}
-
-impl Default for CacheBuilder {
-    /// Creates a [`CacheBuilder`] with the directory set to `./cache`.
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// # #[tokio::main(flavor = "current_thread")]
-    /// # async fn main() {
-    /// use forceps::CacheBuilder;
-    ///
-    /// let cache = CacheBuilder::default()
-    ///     .build()
-    ///     .await
-    ///     .unwrap();
-    /// # }
-    /// ```
-    fn default() -> Self {
-        const DIR: &str = "./cache";
-        Self::new(DIR)
-    }
-}
-
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::CacheBuilder;
 
     async fn default_cache() -> Cache {
         CacheBuilder::default().build().await.unwrap()
