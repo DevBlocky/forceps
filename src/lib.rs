@@ -1,22 +1,32 @@
 //! `forceps` is a crate that provides a simple and easy-to-use on-disk cache/database.
 //!
-//! **This crate is intended to be used with the [`tokio`] runtime.**
+//! **This crate is intended to be used with the [`tokio`](tokio) runtime.**
 //!
-//! This crate is designed to be thread-safe, performant, and asyncronous for use in HTTP servers
-//! and other network applications. Because of it's use-case, it is optimized for workloads that
-//! include many cache `HIT`s as compared to `MISS`es.
+//! `forceps` is made to be an easy-to-use, thread-safe, performant, and asynchronous disk cache
+//! that has easy reading and manipulation of data. It levereges tokio's async `fs` APIs
+//! and fast task schedulers to perform IO operations, and `sled` as a fast metadata database.
 //!
 //! It was originally designed to be used in [`scalpel`](https://github.com/blockba5her/scalpel),
 //! the MD@Home implementation for the Rust language.
 //!
-//! # Features
+//! ## Features
 //!
 //! - Asynchronous APIs
 //! - Fast and reliable reading/writing
-//! - Tuned for large-file databases
+//! - Tuned for large-file-storage solutions
 //! - Easily accessible value metadata
-//! - Optimized for cache `HIT`s
+//! - Optimized for higher read ratio
 //! - Easy error handling
+//!
+//! ## Database and Meta-database
+//!
+//! This database solution easily separates data into two databases: the LFS (large-file-storage)
+//! database, and the metadata database. The LFS database is powered using Tokio's async filesystem
+//! operations, whereas the metadata database is powered using [`sled`](sled).
+//!
+//! The advantage of splitting these two up is simple: Accessing metadata (for things like database
+//! eviction) is realatively cheap and efficient, with the only downside being that `async` is not
+//! present.
 //!
 //! # Examples
 //!

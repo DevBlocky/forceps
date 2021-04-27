@@ -1,13 +1,29 @@
+<div align="center">
+
 # Forceps
+[![docs.rs][docs-rs-badge]][docs-rs-url]
+[![crates.io][crates-badge]][crates-url]
+[![CI][ci-badge]][ci-url]
 
-Forceps is a fast, asynchronous, and simple cache/database built for large-file storage for HTTP
-servers and other network applications. This crate is intended to be used with the `tokio`
-runtime.
+**The easy-to-use and asynchronous solution for your tokio project**
 
-The motive behind this project is that there wasn't any good caching solutions for rust crates
-that were publically available. The best I found was zkat/cacache-rs, however it lacked in speed
-and wasn't what I was looking for exactly. This cache was specifically designed for
-[scalpel](https://github.com/blockba5her/scalpel), which is an image cache server for MangaDex.
+[docs-rs-badge]: https://docs.rs/forceps/badge.svg
+[docs-rs-url]: https://docs.rs/forceps/*/forceps
+[crates-badge]: https://img.shields.io/crates/v/forceps.svg
+[crates-url]: https://crates.io/crates/forceps
+[ci-badge]: https://github.com/blockba5her/forceps/actions/workflows/ci.yml/badge.svg
+[ci-url]: https://github.com/blockba5her/forceps/actions/workflows/ci.yml
+
+<div>
+
+---
+
+`forceps` is made to be an easy-to-use, thread-safe, performant, and asynchronous disk cache
+that has easy reading and manipulation of data. It levereges tokio's async `fs` APIs
+and fast task schedulers to perform IO operations, and `sled` as a fast metadata database.
+
+It was originally designed to be used in [`scalpel`](https://github.com/blockba5her/scalpel),
+the MD@Home implementation for the Rust language.
 
 ## Instability Warning
 
@@ -23,12 +39,14 @@ It is advisable to use another solution if you have the option!
 - Optimized for cache `HIT`s
 - Easy error handling
 
-### Features-to-come
+### Planned Features
 
 - Toggleable in-memory LRU cache
-- Optional last-access timestamps
-- Removing database entries
-- Easy cache eviction
+- `bytes` crate support (planned non-optional)
+- Optional tracking of last-access timestamps
+- Removal of entries
+- Included cache eviction (LRU/FIFO)
+- Built-in cache integrity checks
 
 ## Documentation
 
