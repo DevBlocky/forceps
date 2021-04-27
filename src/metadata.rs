@@ -119,7 +119,7 @@ impl Metadata {
     #[inline]
     pub fn check_integrity_of(&self, data: &[u8]) -> bool {
         let other_integrity: Md5Bytes = md5::compute(data).into();
-        &other_integrity == &self.integrity
+        other_integrity == self.integrity
     }
 }
 
@@ -135,8 +135,8 @@ impl MetaDb {
     pub fn get_metadata(&self, key: &[u8]) -> Result<Metadata> {
         let data = match self.db.get(key) {
             Ok(Some(data)) => data,
-            Ok(None) => Err(ForcepError::NotFound)?,
-            Err(e) => Err(ForcepError::MetaDb(e))?,
+            Ok(None) => return Err(ForcepError::NotFound),
+            Err(e) => return Err(ForcepError::MetaDb(e)),
         };
         Metadata::deserialize(&data)
     }

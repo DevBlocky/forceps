@@ -72,6 +72,7 @@ impl Cache {
     /// // Use other methods for configuration
     /// ```
     #[inline]
+    #[allow(clippy::new_ret_no_self)]
     pub fn new<P: AsRef<path::Path>>(path: P) -> crate::CacheBuilder {
         crate::CacheBuilder::new(path)
     }
