@@ -161,7 +161,7 @@ impl Cache {
     /// cache.write(b"MY_KEY", b"Hello World").await.unwrap();
     /// # }
     /// ```
-    pub async fn write<K: AsRef<[u8]>, V: AsRef<[u8]>>(&self, key: K, value: V) -> Result<()> {
+    pub async fn write<K: AsRef<[u8]>, V: AsRef<[u8]>>(&self, key: K, value: V) -> Result<Metadata> {
         use tokio::io::AsyncWriteExt;
         let key = key.as_ref();
         let value = value.as_ref();
@@ -183,9 +183,7 @@ impl Cache {
             .await
             .map_err(ForcepError::Io)?;
 
-        self.meta.insert_metadata_for(key, value)?;
-
-        Ok(())
+        self.meta.insert_metadata_for(key, value)
     }
 
     /// Removes an entry from the cache, returning its [`Metadata`].
