@@ -240,6 +240,7 @@ name = "forceps"
 version = "0.1.0"
 dependencies = [
  "bson",
+ "bytes",
  "criterion",
  "hex",
  "md5",

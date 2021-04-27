@@ -1,4 +1,5 @@
 use crate::{ForcepError, MetaDb, Metadata, Result};
+use bytes::Bytes;
 use std::io;
 use std::path;
 use tokio::fs as afs;
@@ -132,10 +133,10 @@ impl Cache {
     /// # cache.write(b"MY_KEY", b"Hello World").await.unwrap();
     ///
     /// let value = cache.read(b"MY_KEY").await.unwrap();
-    /// assert_eq!(&value, b"Hello World");
+    /// assert_eq!(value.as_ref(), b"Hello World");
     /// # }
     /// ```
-    pub async fn read<K: AsRef<[u8]>>(&self, key: K) -> Result<Vec<u8>> {
+    pub async fn read<K: AsRef<[u8]>>(&self, key: K) -> Result<Bytes> {
         use tokio::io::AsyncReadExt;
 
         let file = {
@@ -159,7 +160,7 @@ impl Cache {
             .read_to_end(&mut buf)
             .await
             .map_err(ForcepError::Io)?;
-        Ok(buf)
+        Ok(Bytes::from(buf))
     }
 
     /// Writes an entry with the specified key to the cache database. This will replace the
@@ -350,7 +351,7 @@ mod test {
 
         cache.write(&b"CACHE_KEY", &b"Hello World").await.unwrap();
         let data = cache.read(&b"CACHE_KEY").await.unwrap();
-        assert_eq!(&data, &b"Hello World");
+        assert_eq!(data.as_ref(), b"Hello World");
         cache.remove(&b"CACHE_KEY").await.unwrap();
     }
 

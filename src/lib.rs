@@ -42,7 +42,7 @@
 //!
 //! cache.write(b"MY_KEY", b"Hello World").await.unwrap();
 //! let data = cache.read(b"MY_KEY").await.unwrap();
-//! assert_eq!(&data, b"Hello World");
+//! assert_eq!(data.as_ref(), b"Hello World");
 //! # }
 //! ```
 
