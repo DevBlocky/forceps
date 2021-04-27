@@ -32,17 +32,17 @@ pub(crate) struct Options {
 /// The main component of `forceps`, acts as the API for interacting with the on-disk API.
 ///
 /// This structure exposes `read`, `write`, and misc metadata operations. `read` and `write` are
-/// both async, whereas all metadata operations are sync. To create this structure, use the
-/// [`CacheBuilder`](crate::CacheBuilder).
+/// both async, whereas all metadata operations are sync. See [`CacheBuilder`](crate::CacheBuilder)
+/// for all customization options.
 ///
 /// # Examples
 ///
 /// ```rust
 /// # #[tokio::main(flavor = "current_thread")]
 /// # async fn main() {
-/// use forceps::CacheBuilder;
+/// use forceps::Cache;
 ///
-/// let cache = CacheBuilder::new("./cache")
+/// let cache = Cache::new("./cache")
 ///     .build()
 ///     .await
 ///     .unwrap();
@@ -55,6 +55,27 @@ pub struct Cache {
 }
 
 impl Cache {
+    /// Creates a new [`CacheBuilder`], which can be used to customize and create a [`Cache`]
+    /// instance. This function is an alias for [`CacheBuilder::new`].
+    ///
+    /// The `path` supplied is the base directory of the cache instance.
+    ///
+    /// [`CacheBuilder`]: crate::CacheBuilder
+    /// [`CacheBuilder::new`]: crate::CacheBuilder::new
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use forceps::Cache;
+    ///
+    /// let builder = Cache::new("./cache");
+    /// // Use other methods for configuration
+    /// ```
+    #[inline]
+    pub fn new<P: AsRef<path::Path>>(path: P) -> crate::CacheBuilder {
+        crate::CacheBuilder::new(path)
+    }
+
     /// Creates a new Cache instance based on the CacheBuilder
     pub(crate) async fn create(opts: Options) -> Result<Self> {
         // create the base directory for the cache
@@ -101,9 +122,9 @@ impl Cache {
     /// ```rust
     /// # #[tokio::main(flavor = "current_thread")]
     /// # async fn main() {
-    /// use forceps::CacheBuilder;
+    /// use forceps::Cache;
     ///
-    /// let cache = CacheBuilder::new("./cache")
+    /// let cache = Cache::new("./cache")
     ///     .build()
     ///     .await
     ///     .unwrap();
@@ -148,9 +169,9 @@ impl Cache {
     /// ```rust
     /// # #[tokio::main(flavor = "current_thread")]
     /// # async fn main() {
-    /// use forceps::CacheBuilder;
+    /// use forceps::Cache;
     ///
-    /// let cache = CacheBuilder::new("./cache")
+    /// let cache = Cache::new("./cache")
     ///     .build()
     ///     .await
     ///     .unwrap();
@@ -198,9 +219,9 @@ impl Cache {
     /// ```rust
     /// # #[tokio::main(flavor = "current_thread")]
     /// # async fn main() {
-    /// use forceps::CacheBuilder;
+    /// use forceps::Cache;
     ///
-    /// let cache = CacheBuilder::new("./cache")
+    /// let cache = Cache::new("./cache")
     ///     .build()
     ///     .await
     ///     .unwrap();
@@ -253,9 +274,9 @@ impl Cache {
     /// ```rust
     /// # #[tokio::main(flavor = "current_thread")]
     /// # async fn main() {
-    /// use forceps::CacheBuilder;
+    /// use forceps::Cache;
     ///
-    /// let cache = CacheBuilder::new("./cache")
+    /// let cache = Cache::new("./cache")
     ///     .build()
     ///     .await
     ///     .unwrap();
@@ -265,6 +286,7 @@ impl Cache {
     /// assert_eq!(meta.get_size(), b"Hello World".len() as u64);
     /// # }
     /// ```
+    #[inline]
     pub fn read_metadata<K: AsRef<[u8]>>(&self, key: K) -> Result<Metadata> {
         self.meta.get_metadata(key.as_ref())
     }
@@ -284,9 +306,9 @@ impl Cache {
     /// ```rust
     /// # #[tokio::main(flavor = "current_thread")]
     /// # async fn main() {
-    /// use forceps::CacheBuilder;
+    /// use forceps::Cache;
     ///
-    /// let cache = CacheBuilder::new("./cache")
+    /// let cache = Cache::new("./cache")
     ///     .build()
     ///     .await
     ///     .unwrap();
@@ -298,6 +320,7 @@ impl Cache {
     /// }
     /// # }
     /// ```
+    #[inline]
     pub fn metadata_iter(&self) -> impl Iterator<Item = Result<(Vec<u8>, Metadata)>> {
         self.meta.metadata_iter()
     }

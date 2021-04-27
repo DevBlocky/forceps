@@ -16,9 +16,9 @@ pub type Md5Bytes = [u8; 16];
 /// ```rust
 /// # #[tokio::main(flavor = "current_thread")]
 /// # async fn main() {
-/// use forceps::CacheBuilder;
+/// use forceps::Cache;
 ///
-/// let cache = CacheBuilder::new("./cache")
+/// let cache = Cache::new("./cache")
 ///     .build()
 ///     .await
 ///     .unwrap();
