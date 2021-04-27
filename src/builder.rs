@@ -44,7 +44,7 @@ impl CacheBuilder {
     pub fn new<P: AsRef<path::Path>>(path: P) -> Self {
         let opts = Options {
             path: path.as_ref().to_owned(),
-            dir_depth: 10,
+            dir_depth: 2,
             save_last_access: false,
 
             // default buffer sizes to 8kb
