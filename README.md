@@ -38,13 +38,12 @@ It is advisable to use another solution if you have the option!
 - Easily accessible value metadata
 - Optimized for cache `HIT`s
 - Easy error handling
+- `bytes` crate support (non-optional)
 
 ### Planned Features
 
 - Toggleable in-memory LRU cache
-- `bytes` crate support (planned non-optional)
 - Optional tracking of last-access timestamps
-- Removal of entries
 - Included cache eviction (LRU/FIFO)
 - Built-in cache integrity checks
 

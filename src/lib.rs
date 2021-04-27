@@ -13,10 +13,11 @@
 //!
 //! - Asynchronous APIs
 //! - Fast and reliable reading/writing
-//! - Tuned for large-file-storage solutions
+//! - Tuned for large-file databases
 //! - Easily accessible value metadata
-//! - Optimized for higher read ratio
+//! - Optimized for cache `HIT`s
 //! - Easy error handling
+//! - `bytes` crate support (non-optional)
 //!
 //! ## Database and Meta-database
 //!
