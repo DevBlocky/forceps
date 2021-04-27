@@ -3,6 +3,20 @@ use std::io;
 use std::path;
 use tokio::fs as afs;
 
+/// Creates a writeable and persistent temporary file in the path provided, returning the path and
+/// file handle.
+async fn tempfile(dir: &path::Path) -> Result<(afs::File, path::PathBuf)> {
+    let tmppath = crate::tmp::tmppath_in(dir);
+    let tmp = afs::OpenOptions::new()
+        .write(true)
+        .create(true)
+        .truncate(true)
+        .open(&tmppath)
+        .await
+        .map_err(ForcepError::Io)?;
+    Ok((tmp, tmppath))
+}
+
 /// The main component of `forceps`, acts as the API for interacting with the on-disk API.
 ///
 /// This structure exposes `read`, `write`, and misc metadata operations. `read` and `write` are
@@ -43,6 +57,7 @@ pub struct CacheBuilder {
     path: path::PathBuf,
 }
 
+
 impl Cache {
     /// Creates a new Cache instance based on the CacheBuilder
     async fn new(builder: CacheBuilder) -> Result<Self> {
@@ -76,29 +91,6 @@ impl Cache {
         }
         buf.push(&hex);
         buf
-    }
-
-    /// Creates a temporary file in the `self.path` directory of the cache, returning the file
-    /// handle and the path of the file created.
-    async fn open_tempfile(&self) -> Result<(afs::File, path::PathBuf)> {
-        let tmp_in = self.path.clone();
-
-        // spawn a blocking task to create the temporary file
-        tokio::task::spawn_blocking(move || {
-            // create a new named temporary file and persist it to capture the file handle and path
-            tempfile::NamedTempFile::new_in(&tmp_in)
-                .map_err(ForcepError::Io)
-                .and_then(|x| x.keep().map_err(|e| ForcepError::Io(e.into())))
-                .map(|(file, path)| (afs::File::from_std(file), path))
-        })
-        .await
-        .map_err(|_| {
-            ForcepError::Io(io::Error::new(
-                io::ErrorKind::Other,
-                "cannot join blocking task",
-            ))
-        })
-        .and_then(|x| x)
     }
 
     /// Reads an entry from the database, returning a vector of bytes that represent the entry.
@@ -175,7 +167,7 @@ impl Cache {
         let key = key.as_ref();
         let value = value.as_ref();
 
-        let (tmp, tmp_path) = self.open_tempfile().await?;
+        let (tmp, tmp_path) = tempfile(&self.path).await?;
         // write all data to a temporary file
         {
             let mut writer = tokio::io::BufWriter::new(tmp);

@@ -13,10 +13,10 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-tempfile = "3.2.0"
 sled = "0.34.6"
 hex = "0.4.3"
 md5 = "0.7.0"
+rand = {version = "0.8.3", features = ["small_rng", "getrandom"], default-features = false}
 bson = {version = "1.2.2", features = ["u2i"]}
 serde = {version = "1.0.125", features = ["derive"]}
 tokio = {version = "1.5.0", features = ["rt", "fs", "io-util"]}
@@ -24,7 +24,6 @@ tokio = {version = "1.5.0", features = ["rt", "fs", "io-util"]}
 [dev-dependencies]
 tokio = {version = "1.5.0", features = ["full"]}
 criterion = {version = "0.3.4", features = ["async_tokio", "html_reports"]}
-rand = {version = "0.8.3", features = ["small_rng"], default-features = false}
 
 [lib]
 path = "src/lib.rs"
