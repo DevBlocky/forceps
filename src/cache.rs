@@ -57,7 +57,6 @@ pub struct CacheBuilder {
     path: path::PathBuf,
 }
 
-
 impl Cache {
     /// Creates a new Cache instance based on the CacheBuilder
     async fn new(builder: CacheBuilder) -> Result<Self> {

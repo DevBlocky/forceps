@@ -1,10 +1,7 @@
-use rand::{
-    prelude::*,
-    distributions::Alphanumeric
-};
+use rand::{distributions::Alphanumeric, prelude::*};
 use std::cell::UnsafeCell;
+use std::ffi::{OsStr, OsString};
 use std::path;
-use std::ffi::{OsString, OsStr};
 use std::str;
 
 std::thread_local! {
