@@ -153,6 +153,14 @@ impl MetaDb {
         Ok(meta)
     }
 
+    pub fn remove_metadata_for(&self, key: &[u8]) -> Result<Metadata> {
+        match self.db.remove(key) {
+            Ok(Some(m)) => Metadata::deserialize(&m[..]),
+            Ok(None) => Err(ForcepError::NotFound),
+            Err(e) => Err(ForcepError::MetaDb(e)),
+        }
+    }
+
     /// Iterator over the entire metadata database
     pub fn metadata_iter(&self) -> impl Iterator<Item = Result<(Vec<u8>, Metadata)>> {
         self.db.iter().map(|x| match x {

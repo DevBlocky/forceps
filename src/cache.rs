@@ -188,6 +188,52 @@ impl Cache {
         Ok(())
     }
 
+    /// Removes an entry from the cache, returning its [`Metadata`].
+    ///
+    /// This will remove the entry from both the main cache database and the metadata database.
+    /// Please note that this will return `Error::NotFound` if either the main database *or* the
+    /// meta database didn't find the entry.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # #[tokio::main(flavor = "current_thread")]
+    /// # async fn main() {
+    /// use forceps::CacheBuilder;
+    ///
+    /// let cache = CacheBuilder::new("./cache")
+    ///     .build()
+    ///     .await
+    ///     .unwrap();
+    ///
+    /// # cache.write(b"MY_KEY", b"Hello World").await.unwrap();
+    /// let metadata = cache.remove(b"MY_KEY").await.unwrap();
+    /// assert_eq!(metadata.get_size(), b"Hello World".len() as u64);
+    /// # }
+    /// ```
+    pub async fn remove<K: AsRef<[u8]>>(&self, key: K) -> Result<Metadata> {
+        let key = key.as_ref();
+
+        let cur_path = self.path_from_key(key);
+        let tmp_path = crate::tmp::tmppath_in(&self.path);
+
+        // move then delete the file
+        //
+        // the purpose of moving then deleting is that file moves are much faster than file
+        // deletes. if we were to delete in place, and another thread starts reading, it could
+        // spell bad news.
+        afs::rename(&cur_path, &tmp_path)
+            .await
+            .map_err(|e| match e.kind() {
+                io::ErrorKind::NotFound => ForcepError::NotFound,
+                _ => ForcepError::Io(e),
+            })?;
+        afs::remove_file(&tmp_path).await.map_err(ForcepError::Io)?;
+
+        // remove the metadata for the entry
+        self.meta.remove_metadata_for(key)
+    }
+
     /// Queries the index database for metadata on the entry with the corresponding key.
     ///
     /// This will return the metadata for the associated key. For information about what metadata
@@ -337,12 +383,13 @@ mod test {
     }
 
     #[tokio::test]
-    async fn basic_write_read() {
+    async fn write_read_remove() {
         let cache = default_cache().await;
 
         cache.write(&b"CACHE_KEY", &b"Hello World").await.unwrap();
         let data = cache.read(&b"CACHE_KEY").await.unwrap();
         assert_eq!(&data, &b"Hello World");
+        cache.remove(&b"CACHE_KEY").await.unwrap();
     }
 
     #[tokio::test]

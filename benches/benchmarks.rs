@@ -40,14 +40,12 @@ pub fn cache_write_random_key(c: &mut Criterion) {
         let (db, rt) = make_executor();
         let value = random_bytes(VALUE_SZ);
 
-        b.iter_custom(|iters| {
-            let key = random_bytes(4);
-            let start = Instant::now();
-            for _ in 0..iters {
+        b.iter_with_setup(
+            || random_bytes(4),
+            |key| {
                 rt.block_on(db.write(&key, &value)).unwrap();
-            }
-            start.elapsed()
-        });
+            },
+        );
     });
 }
 
@@ -63,6 +61,21 @@ pub fn cache_read_const_key(c: &mut Criterion) {
         b.iter(|| {
             rt.block_on(db.read(&KEY)).unwrap();
         });
+    });
+}
+
+pub fn cache_remove_const_key(c: &mut Criterion) {
+    c.bench_function("cache::remove_const_key", move |b| {
+        let (db, rt) = make_executor();
+        const KEY: [u8; 4] = [0xDE, 0xAD, 0xBE, 0xEF];
+        let value = random_bytes(VALUE_SZ);
+
+        b.iter_with_setup(
+            || rt.block_on(db.write(&KEY, &value)).unwrap(),
+            |_| {
+                rt.block_on(db.remove(&KEY)).unwrap();
+            },
+        );
     });
 }
 
@@ -84,6 +97,7 @@ criterion_group!(
     cache_write_const_key,
     cache_write_random_key,
     cache_read_const_key,
+    cache_remove_const_key,
     cache_metadata_lookup
 );
 
