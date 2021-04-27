@@ -14,7 +14,7 @@
 [ci-badge]: https://github.com/blockba5her/forceps/actions/workflows/ci.yml/badge.svg
 [ci-url]: https://github.com/blockba5her/forceps/actions/workflows/ci.yml
 
-<div>
+</div>
 
 ---
 
