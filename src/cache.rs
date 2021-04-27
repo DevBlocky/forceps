@@ -161,7 +161,11 @@ impl Cache {
     /// cache.write(b"MY_KEY", b"Hello World").await.unwrap();
     /// # }
     /// ```
-    pub async fn write<K: AsRef<[u8]>, V: AsRef<[u8]>>(&self, key: K, value: V) -> Result<Metadata> {
+    pub async fn write<K: AsRef<[u8]>, V: AsRef<[u8]>>(
+        &self,
+        key: K,
+        value: V,
+    ) -> Result<Metadata> {
         use tokio::io::AsyncWriteExt;
         let key = key.as_ref();
         let value = value.as_ref();
