@@ -161,3 +161,59 @@ impl MetaDb {
         })
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    const DATA: [u8; 4] = [0xDE, 0xAD, 0xBE, 0xEF];
+
+    fn create_db() -> Result<MetaDb> {
+        const META_TESTDIR: &str = "./cache/test-index";
+        let path = path::PathBuf::from(META_TESTDIR);
+        MetaDb::new(&path)
+    }
+
+    #[test]
+    fn create_metadb() {
+        create_db().unwrap();
+    }
+
+    #[test]
+    fn db_read_write() {
+        let db = create_db().unwrap();
+        db.insert_metadata_for(&DATA, &DATA).unwrap();
+        let meta = db.get_metadata(&DATA).unwrap();
+        assert_eq!(meta.get_size(), DATA.len() as u64);
+    }
+
+    #[test]
+    fn check_integrity() {
+        let db = create_db().unwrap();
+        let meta = db.insert_metadata_for(&DATA, &DATA).unwrap();
+        assert!(meta.check_integrity_of(&DATA));
+    }
+
+    #[test]
+    fn last_modified() {
+        let db = create_db().unwrap();
+        let meta = db.insert_metadata_for(&DATA, &DATA).unwrap();
+        // make sure last-modified date is within last second
+        assert!(
+            meta.get_last_modified()
+                .unwrap()
+                .elapsed()
+                .unwrap()
+                .as_secs()
+                == 0
+        );
+    }
+
+    #[test]
+    fn metadata_ser_de() {
+        let db = create_db().unwrap();
+        let meta = db.insert_metadata_for(&DATA, &DATA).unwrap();
+        let ser_bytes = meta.serialize().unwrap();
+        let de = Metadata::deserialize(&ser_bytes).unwrap();
+        assert_eq!(meta.get_integrity(), de.get_integrity());
+    }
+}
