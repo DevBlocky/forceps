@@ -45,7 +45,7 @@ impl CacheBuilder {
         let opts = Options {
             path: path.as_ref().to_owned(),
             dir_depth: 2,
-            save_last_access: false,
+            track_access: false,
 
             // default buffer sizes to 8kb
             rbuff_sz: 8192,
@@ -80,6 +80,18 @@ impl CacheBuilder {
     pub fn read_write_buffer(mut self, size: usize) -> Self {
         self.opts.rbuff_sz = size;
         self.opts.wbuff_sz = size;
+        self
+    }
+
+    /// If set to `true`, this will track track the total hits and the last time an entry was
+    /// accessed in the metadata.
+    ///
+    /// **Default is `false`**
+    ///
+    /// Be warned, turning this on will cause blocking metadata database calls to occur on `read`
+    /// operations. This does not normally occur and can cause problems for `async` applications.
+    pub fn track_access(mut self, toggle: bool) -> Self {
+        self.opts.track_access = toggle;
         self
     }
 

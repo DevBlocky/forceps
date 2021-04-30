@@ -36,6 +36,8 @@ pub struct Metadata {
     last_modified: u64,
     /// Last time since this entry was accessed, milliseconds since epoch
     last_accessed: u64,
+    /// Number of times this entry has been HIT (total accesses)
+    hits: u64,
     /// Md5 hash of the underlying data
     integrity: Md5Bytes,
 }
@@ -61,6 +63,7 @@ impl Metadata {
             size: data.len() as u64,
             last_modified: now_since_epoch(),
             last_accessed: now_since_epoch(),
+            hits: 0,
             integrity: md5::compute(data).into(),
         }
     }
@@ -107,6 +110,43 @@ impl Metadata {
     #[inline]
     pub fn get_last_modified_raw(&self) -> u64 {
         self.last_modified
+    }
+
+    /// The total number of times this entry has been read.
+    ///
+    /// **NOTE:** This will be 0 unless `track_access` is enabled from the [`CacheBuilder`]
+    ///
+    /// [`CacheBuilder`]: crate::CacheBuilder
+    #[inline]
+    pub fn get_hits(&self) -> u64 {
+        self.hits
+    }
+
+    /// Retrives the last time this entry was accessed (read from).
+    ///
+    /// **NOTE:** This will be the same as [`get_last_modified`] unless `track_access` is enabled from
+    /// the [`CacheBuilder`]
+    ///
+    /// [`get_last_modified`]: Self::get_last_modified
+    /// [`CacheBuilder`]: crate::CacheBuilder
+    pub fn get_last_acccessed(&self) -> Option<time::SystemTime> {
+        match self.last_accessed {
+            0 => None,
+            millis => Some(time::UNIX_EPOCH + time::Duration::from_millis(millis)),
+        }
+    }
+    /// Retrieves the raw `last_accessed` time, which is the milliseconds since
+    /// [`time::UNIX_EPOCH`]. If the returned result is `0`, that means there is no `last_accessed`
+    /// time.
+    ///
+    /// **NOTE:** This will be the same as [`get_last_modified_raw`] unless `track_access` is enabled
+    /// from the [`CacheBuilder`]
+    ///
+    /// [`get_last_modified_raw`]: Self::get_last_modified_raw
+    /// [`CacheBuilder`]: crate::CacheBuilder
+    #[inline]
+    pub fn get_last_accessed_raw(&self) -> u64 {
+        self.last_accessed
     }
 
     /// Retrieves the internal [`Md5Bytes`] integrity of the corresponding metadata entry.
@@ -159,6 +199,22 @@ impl MetaDb {
             Ok(None) => Err(ForcepError::NotFound),
             Err(e) => Err(ForcepError::MetaDb(e)),
         }
+    }
+
+    /// Will increment the `hits` counter and set the `last_accessed` value to now for the found
+    /// metadata key.
+    pub fn track_access_for(&self, key: &[u8]) -> Result<Metadata> {
+        let mut meta = match self.db.get(key) {
+            Ok(Some(entry)) => Metadata::deserialize(&entry[..])?,
+            Err(e) => return Err(ForcepError::MetaDb(e)),
+            Ok(None) => return Err(ForcepError::NotFound),
+        };
+        meta.last_accessed = now_since_epoch();
+        meta.hits += 1;
+        self.db
+            .insert(key, Metadata::serialize(&meta)?)
+            .map_err(ForcepError::MetaDb)?;
+        Ok(meta)
     }
 
     /// Iterator over the entire metadata database

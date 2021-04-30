@@ -1,21 +1,30 @@
-use criterion::{criterion_group, Criterion};
+use criterion::{criterion_group, BenchmarkId, Criterion};
 use rand::prelude::*;
-use std::time::Instant;
+use std::cell::UnsafeCell;
+use std::thread_local;
 
-fn make_executor() -> (forceps::Cache, tokio::runtime::Runtime) {
+fn make_executor_custom<F: FnOnce() -> forceps::CacheBuilder>(
+    f: F,
+) -> (forceps::Cache, tokio::runtime::Runtime) {
     let rt = tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()
         .unwrap();
 
-    let cache = rt.block_on(async move { forceps::CacheBuilder::default().build().await.unwrap() });
+    let cache = rt.block_on(async move { f().build().await.unwrap() });
     (cache, rt)
+}
+fn make_executor() -> (forceps::Cache, tokio::runtime::Runtime) {
+    make_executor_custom(|| forceps::CacheBuilder::default())
 }
 
 fn random_bytes(size: usize) -> Vec<u8> {
+    std::thread_local! {
+        static RNG: UnsafeCell<SmallRng> = UnsafeCell::new(SmallRng::from_entropy());
+    }
+
     let mut buf = vec![0u8; size];
-    let mut rng = rand::rngs::OsRng::default();
-    rng.fill_bytes(&mut buf);
+    RNG.with(|rng| unsafe { (&mut *rng.get()).fill_bytes(&mut buf) });
     buf
 }
 
@@ -50,18 +59,27 @@ pub fn cache_write_random_key(c: &mut Criterion) {
 }
 
 pub fn cache_read_const_key(c: &mut Criterion) {
-    c.bench_function("cache::read_const_key", move |b| {
-        let (db, rt) = make_executor();
-        const KEY: [u8; 4] = [0xDE, 0xAD, 0xBE, 0xEF];
-        let value = random_bytes(VALUE_SZ);
+    let mut group = c.benchmark_group("cache::read_const_key");
+    for &tracking in [false, true].iter() {
+        group.bench_with_input(
+            BenchmarkId::from_parameter(if tracking { "tracked" } else { "untracked" }),
+            &tracking,
+            move |b, &tracking| {
+                let (db, rt) = make_executor_custom(|| {
+                    forceps::CacheBuilder::default().track_access(tracking)
+                });
+                const KEY: [u8; 4] = [0xDE, 0xAD, 0xBE, 0xEF];
+                let value = random_bytes(VALUE_SZ);
 
-        // assert there is the key in the db
-        rt.block_on(db.write(&KEY, &value)).unwrap();
+                // assert there is the key in the db
+                rt.block_on(db.write(&KEY, &value)).unwrap();
 
-        b.iter(|| {
-            rt.block_on(db.read(&KEY)).unwrap();
-        });
-    });
+                b.iter(|| {
+                    rt.block_on(db.read(&KEY)).unwrap();
+                });
+            },
+        );
+    }
 }
 
 pub fn cache_remove_const_key(c: &mut Criterion) {

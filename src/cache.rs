@@ -22,8 +22,7 @@ async fn tempfile(dir: &path::Path) -> Result<(afs::File, path::PathBuf)> {
 pub(crate) struct Options {
     pub(crate) path: path::PathBuf,
     pub(crate) dir_depth: u8,
-    // TODO: implement below option
-    pub(crate) save_last_access: bool,
+    pub(crate) track_access: bool,
 
     // read and write buffer sizes
     pub(crate) rbuff_sz: usize,
@@ -119,6 +118,12 @@ impl Cache {
     /// If the entry is not found, then it will return
     /// `Err(`[`Error::NotFound`](ForcepError::NotFound)`)`.
     ///
+    /// # Metadata
+    ///
+    /// This function will *not* perform a metadata read or write **unless** the `track_access`
+    /// build option is set. If the option is set, then it will perform a blocking read/write to
+    /// write new values to track the last access time and the total hits.
+    ///
     /// # Examples
     ///
     /// ```rust
@@ -160,6 +165,12 @@ impl Cache {
             .read_to_end(&mut buf)
             .await
             .map_err(ForcepError::Io)?;
+
+        // track this access if the flag is set
+        if self.opts.track_access {
+            self.meta.track_access_for(key.as_ref())?;
+        }
+
         Ok(Bytes::from(buf))
     }
 
@@ -353,6 +364,21 @@ mod test {
         let data = cache.read(&b"CACHE_KEY").await.unwrap();
         assert_eq!(data.as_ref(), b"Hello World");
         cache.remove(&b"CACHE_KEY").await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn tracking_test() {
+        let cache = CacheBuilder::default()
+            .track_access(true)
+            .build()
+            .await
+            .unwrap();
+
+        cache.write(b"CACHE_KEY", b"Hello World").await.unwrap();
+        for _ in 0..100 {
+            cache.read(b"CACHE_KEY").await.unwrap();
+        }
+        assert_eq!(cache.read_metadata(b"CACHE_KEY").unwrap().get_hits(), 100);
     }
 
     #[tokio::test]
