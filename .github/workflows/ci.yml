@@ -3,8 +3,8 @@ name: CI
 on:
     pull_request:
     push:
-        branches:
-            - main
+        # branches:
+            # - main
 
 env:
     RUST_BACKTRACE: 1
@@ -85,6 +85,32 @@ jobs:
               with:
                   command: test
                   args: -- --test-threads 1
+
+    bench:
+        name: Benchmark
+        runs-on: ubuntu-latest
+        needs: [style]
+
+        steps:
+            - uses: actions/checkout@v2
+            - uses: actions-rs/toolchain@v1
+              with:
+                  toolchain: stable
+                  profile: minimal
+            - name: Install Gnuplot
+              run: sudo apt-get update && sudo apt-get install -y gnuplot
+            - name: cargo bench
+              run: cargo bench -- --output-format bencher | tee output.txt
+            - uses: rhysd/github-action-benchmark@v1
+              with:
+                  name: Forceps Benchmark
+                  tool: cargo
+                  output-file-path: output.txt
+                  github-token: ${{ secrets.GITHUB_TOKEN }}
+                  alert-threshold: '200%'
+                  comment-on-alert: true
+                  fail-on-alert: false
+                  alert-comment-cc-users: '@blockba5her'
 
     docs:
         name: Docs
