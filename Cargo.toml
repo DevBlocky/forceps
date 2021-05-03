@@ -21,6 +21,7 @@ bson = {version = "1.2.2", features = ["u2i"]}
 serde = {version = "1.0.125", features = ["derive"]}
 tokio = {version = "1.5.0", features = ["fs", "io-util"]}
 bytes = "1.0.1"
+async-trait = "0.1.50"
 
 [dev-dependencies]
 tokio = {version = "1.5.0", features = ["full"]}

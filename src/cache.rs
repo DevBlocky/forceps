@@ -2,6 +2,7 @@ use crate::{ForcepError, MetaDb, Metadata, Result};
 use bytes::Bytes;
 use std::io;
 use std::path;
+use std::result;
 use tokio::fs as afs;
 
 /// Creates a writeable and persistent temporary file in the path provided, returning the path and
@@ -336,6 +337,21 @@ impl Cache {
     #[inline]
     pub fn metadata_iter(&self) -> impl Iterator<Item = Result<(Vec<u8>, Metadata)>> {
         self.meta.metadata_iter()
+    }
+
+    /// Runs the specified eviction algorithm over this instance cache instance.
+    ///
+    /// Eviction algorithms will remove items out of the cache until certain a condition has been
+    /// met, usually a size requirement. See the [`evictors`] module for more information and
+    /// examples.
+    ///
+    /// [`evictors`]: crate::evictors
+    #[inline]
+    pub async fn evict_with<E>(&self, evictor: E) -> result::Result<(), E::Err>
+    where
+        E: crate::evictors::Evictor,
+    {
+        evictor.evict(self).await
     }
 }
 

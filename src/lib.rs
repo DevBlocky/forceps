@@ -48,6 +48,7 @@
 //! ```
 
 #![warn(missing_docs)]
+#![warn(broken_intra_doc_links)]
 
 use std::io;
 
@@ -95,3 +96,11 @@ pub use cache::Cache;
 mod metadata;
 pub(crate) use metadata::MetaDb;
 pub use metadata::{Md5Bytes, Metadata};
+
+/// A collection of [`Cache`] eviction algorithms and generics
+///
+/// This module contains the [`Evictor`] trait, which is used to signify a structure or enum that
+/// is used to evict items out of a cache, as well as some implementations of that trait.
+///
+/// [`Evictor`]: crate::evictors::Evictor
+pub mod evictors;
