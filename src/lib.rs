@@ -14,6 +14,7 @@
 //! - Asynchronous APIs
 //! - Fast and reliable reading/writing
 //! - Tuned for large-file databases
+//! - Included cache eviction (LRU/FIFO)
 //! - Easily accessible value metadata
 //! - Optimized for cache `HIT`s
 //! - Easy error handling
@@ -31,9 +32,9 @@
 //!
 //! # Examples
 //!
-//! ```rust
-//! # #[tokio::main(flavor = "current_thread")]
-//! # async fn main() {
+//! ```rust,no_run
+//! #[tokio::main]
+//! async fn main() {
 //! use forceps::Cache;
 //!
 //! let cache = Cache::new("./cache")
@@ -44,7 +45,7 @@
 //! cache.write(b"MY_KEY", b"Hello World").await.unwrap();
 //! let data = cache.read(b"MY_KEY").await.unwrap();
 //! assert_eq!(data.as_ref(), b"Hello World");
-//! # }
+//! }
 //! ```
 
 #![warn(missing_docs)]

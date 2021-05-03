@@ -35,6 +35,7 @@ It is advisable to use another solution if you have the option!
 - Asynchronous APIs
 - Fast and reliable reading/writing
 - Tuned for large-file databases
+- Included cache eviction (LRU/FIFO)
 - Easily accessible value metadata
 - Optimized for cache `HIT`s
 - Easy error handling
@@ -44,7 +45,6 @@ It is advisable to use another solution if you have the option!
 
 - Toggleable in-memory LRU cache
 - Optional tracking of last-access timestamps
-- Included cache eviction (LRU/FIFO)
 - Built-in cache integrity checks
 
 ## Documentation

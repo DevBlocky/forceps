@@ -30,11 +30,16 @@ pub(crate) struct Options {
     pub(crate) wbuff_sz: usize,
 }
 
-/// The main component of `forceps`, acts as the API for interacting with the on-disk API.
+/// The main component of `forceps`, and  acts as the API for interacting with the on-disk cache.
 ///
-/// This structure exposes `read`, `write`, and misc metadata operations. `read` and `write` are
-/// both async, whereas all metadata operations are sync. See [`CacheBuilder`](crate::CacheBuilder)
-/// for all customization options.
+/// This structure includes the async `read`, `write`, and `remove` operations which are the basic
+/// operations of the cache. It also includes some misc functions to interact with metadata and
+/// evict items from the cache.
+///
+/// # Eviction
+///
+/// This cache can evict items with a number of different eviction algorithms. To see more, see
+/// [`evict_with`] and the [`evictors`] module.
 ///
 /// # Examples
 ///
@@ -49,6 +54,9 @@ pub(crate) struct Options {
 ///     .unwrap();
 /// # }
 /// ```
+///
+/// [`evict_with`]: #method.evict_with
+/// [`evictors`]: crate::evictors
 #[derive(Debug)]
 pub struct Cache {
     meta: MetaDb,
