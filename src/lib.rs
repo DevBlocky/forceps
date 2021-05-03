@@ -51,6 +51,7 @@
 #![warn(missing_docs)]
 #![warn(broken_intra_doc_links)]
 
+use std::error;
 use std::io;
 
 /// Global error type for the `forceps` crate, which is used in the `Result` types of all calls to
@@ -84,7 +85,17 @@ impl std::fmt::Display for ForcepError {
         }
     }
 }
-impl std::error::Error for ForcepError {}
+impl error::Error for ForcepError {
+    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
+        match self {
+            Self::Io(e) => Some(e),
+            Self::MetaDe(e) => Some(e),
+            Self::MetaSer(e) => Some(e),
+            Self::MetaDb(e) => Some(e),
+            Self::NotFound => None,
+        }
+    }
+}
 
 mod tmp;
 
