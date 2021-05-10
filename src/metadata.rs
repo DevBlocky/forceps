@@ -175,7 +175,7 @@ impl MetaDb {
     pub fn get_metadata(&self, key: &[u8]) -> Result<Metadata> {
         let data = match self.db.get(key) {
             Ok(Some(data)) => data,
-            Ok(None) => return Err(ForcepError::NotFound),
+            Ok(None) => return Err(ForcepError::MetaNotFound),
             Err(e) => return Err(ForcepError::MetaDb(e)),
         };
         Metadata::deserialize(&data)
@@ -196,7 +196,7 @@ impl MetaDb {
     pub fn remove_metadata_for(&self, key: &[u8]) -> Result<Metadata> {
         match self.db.remove(key) {
             Ok(Some(m)) => Metadata::deserialize(&m[..]),
-            Ok(None) => Err(ForcepError::NotFound),
+            Ok(None) => Err(ForcepError::MetaNotFound),
             Err(e) => Err(ForcepError::MetaDb(e)),
         }
     }
@@ -207,7 +207,7 @@ impl MetaDb {
         let mut meta = match self.db.get(key) {
             Ok(Some(entry)) => Metadata::deserialize(&entry[..])?,
             Err(e) => return Err(ForcepError::MetaDb(e)),
-            Ok(None) => return Err(ForcepError::NotFound),
+            Ok(None) => return Err(ForcepError::MetaNotFound),
         };
         meta.last_accessed = now_since_epoch();
         meta.hits += 1;

@@ -69,6 +69,8 @@ pub enum ForcepError {
     MetaSer(bson::ser::Error),
     /// Error with metadata sled database operation
     MetaDb(sled::Error),
+    /// The entry was found successfully, but the metadata was strangely not present
+    MetaNotFound,
     /// The entry for the specified key is not found
     NotFound,
 }
@@ -84,6 +86,7 @@ impl std::fmt::Display for ForcepError {
             Self::MetaDe(e) => write!(fmt, "there was a problem deserializing metadata: {}", e),
             Self::MetaSer(e) => write!(fmt, "there was a problem serializing metadata: {}", e),
             Self::MetaDb(e) => write!(fmt, "an error with the metadata database occurred: {}", e),
+            Self::MetaNotFound => write!(fmt, "the entry for the key provided was found, but the metadata was strangely not present"),
             Self::NotFound => write!(fmt, "the entry for the key provided was not found"),
         }
     }
@@ -95,6 +98,7 @@ impl error::Error for ForcepError {
             Self::MetaDe(e) => Some(e),
             Self::MetaSer(e) => Some(e),
             Self::MetaDb(e) => Some(e),
+            Self::MetaNotFound => None,
             Self::NotFound => None,
         }
     }
