@@ -47,6 +47,9 @@ impl CacheBuilder {
             dir_depth: 2,
             track_access: false,
 
+            // default to no in-mem lru
+            lru_size: 0,
+
             // default buffer sizes to 8kb
             rbuff_sz: 8192,
             wbuff_sz: 8192,
@@ -68,6 +71,17 @@ impl CacheBuilder {
     /// inaccessible, despite the metadata being accessible.
     pub fn dir_depth(mut self, depth: u8) -> Self {
         self.opts.dir_depth = depth;
+        self
+    }
+
+    /// Sets the maximum size (in bytes) for the in-memory Least-Recently-Used cache.
+    ///
+    /// **Default is `0`**
+    ///
+    /// Setting this above `0` will create an in-memory store for recently-used entries. This will
+    /// use up more RAM, but will also significantly increase speed on memcache `HIT`s.
+    pub fn memory_lru_max_size(mut self, size: usize) -> Self {
+        self.opts.lru_size = size;
         self
     }
 

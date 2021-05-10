@@ -13,6 +13,7 @@
 //!
 //! - Asynchronous APIs
 //! - Fast and reliable reading/writing
+//! - Optional memory-cache layer
 //! - Tuned for large-file databases
 //! - Included cache eviction (LRU/FIFO)
 //! - Easily accessible value metadata
@@ -33,18 +34,20 @@
 //! # Examples
 //!
 //! ```rust,no_run
-//! #[tokio::main]
-//! async fn main() {
+//! use std::error::Error;
 //! use forceps::Cache;
 //!
-//! let cache = Cache::new("./cache")
-//!     .build()
-//!     .await
-//!     .unwrap();
+//! #[tokio::main]
+//! async fn main() -> Result<(), Box<dyn Error>> {
+//!     let cache = Cache::new("./cache")
+//!         .build()
+//!         .await?;
 //!
-//! cache.write(b"MY_KEY", b"Hello World").await.unwrap();
-//! let data = cache.read(b"MY_KEY").await.unwrap();
-//! assert_eq!(data.as_ref(), b"Hello World");
+//!     cache.write(b"MY_KEY", b"Hello World").await?;
+//!     let data = cache.read(b"MY_KEY").await?;
+//!     assert_eq!(data.as_ref(), b"Hello World");
+//!
+//!     Ok(())
 //! }
 //! ```
 
@@ -97,6 +100,7 @@ impl error::Error for ForcepError {
     }
 }
 
+mod mem_cache;
 mod tmp;
 
 mod builder;

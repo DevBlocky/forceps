@@ -1,4 +1,4 @@
-use crate::{ForcepError, MetaDb, Metadata, Result};
+use crate::{mem_cache::MemCache, ForcepError, MetaDb, Metadata, Result};
 use bytes::Bytes;
 use std::io;
 use std::path;
@@ -25,6 +25,9 @@ pub(crate) struct Options {
     pub(crate) dir_depth: u8,
     pub(crate) track_access: bool,
 
+    // maximum size of the in-memory lru in bytes
+    pub(crate) lru_size: usize,
+
     // read and write buffer sizes
     pub(crate) rbuff_sz: usize,
     pub(crate) wbuff_sz: usize,
@@ -40,6 +43,12 @@ pub(crate) struct Options {
 ///
 /// This cache can evict items with a number of different eviction algorithms. To see more, see
 /// [`evict_with`] and the [`evictors`] module.
+///
+/// # Memory Cache
+///
+/// An in-memory cache can be optionally enabled as a layer over the regular on-disk cache. The
+/// memcache provides fast `HIT`s for recently used entries, circumventing filesystem operations
+/// altogether. To enable, use the [`CacheBuilder`]`::memory_lru_max_size` method.
 ///
 /// # Examples
 ///
@@ -57,9 +66,11 @@ pub(crate) struct Options {
 ///
 /// [`evict_with`]: #method.evict_with
 /// [`evictors`]: crate::evictors
+/// [`CacheBuilder`]: crate::CacheBuilder
 #[derive(Debug)]
 pub struct Cache {
     meta: MetaDb,
+    mem: MemCache,
     opts: Options,
 }
 
@@ -97,6 +108,7 @@ impl Cache {
         meta_path.push("index");
         Ok(Self {
             meta: MetaDb::new(&meta_path)?,
+            mem: MemCache::new(opts.lru_size),
             opts,
         })
     }
@@ -118,6 +130,15 @@ impl Cache {
         }
         buf.push(&hex);
         buf
+    }
+
+    /// Tracks the access for a cache entry if the option is enabled
+    #[inline]
+    fn track_access_for(&self, k: &[u8]) -> Result<()> {
+        if self.opts.track_access {
+            self.meta.track_access_for(k)?;
+        }
+        Ok(())
     }
 
     /// Reads an entry from the database, returning a vector of bytes that represent the entry.
@@ -152,9 +173,15 @@ impl Cache {
     /// ```
     pub async fn read<K: AsRef<[u8]>>(&self, key: K) -> Result<Bytes> {
         use tokio::io::AsyncReadExt;
+        let k = key.as_ref();
+
+        // look in the memory cache to see if it's there and return if it is
+        if let Some(val) = self.mem.get(k) {
+            return self.track_access_for(k).map(|_| val);
+        }
 
         let file = {
-            let path = self.path_from_key(key.as_ref());
+            let path = self.path_from_key(k);
             afs::OpenOptions::new()
                 .read(true)
                 .open(&path)
@@ -175,12 +202,10 @@ impl Cache {
             .await
             .map_err(ForcepError::Io)?;
 
-        // track this access if the flag is set
-        if self.opts.track_access {
-            self.meta.track_access_for(key.as_ref())?;
-        }
-
-        Ok(Bytes::from(buf))
+        self.track_access_for(k)?;
+        let bytes = Bytes::from(buf);
+        self.mem.put(k, Bytes::clone(&bytes));
+        Ok(bytes)
     }
 
     /// Writes an entry with the specified key to the cache database. This will replace the
@@ -227,6 +252,9 @@ impl Cache {
             .await
             .map_err(ForcepError::Io)?;
 
+        if !self.mem.is_nil() {
+            self.mem.put(key, Bytes::from(Vec::from(value)));
+        }
         self.meta.insert_metadata_for(key, value)
     }
 
