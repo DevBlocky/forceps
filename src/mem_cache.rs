@@ -48,7 +48,6 @@ impl MemCacheInner {
         let updated_sz = self.current.fetch_add(v_sz, Ordering::SeqCst) + v_sz;
 
         // if the new size is greater than the cap, start evicting items
-        println!("{} / {}", updated_sz, self.cap);
         if updated_sz > self.cap {
             self.evict(&mut guard, updated_sz);
         }
