@@ -52,7 +52,7 @@
 //! ```
 
 #![warn(missing_docs)]
-#![warn(broken_intra_doc_links)]
+#![warn(rustdoc::broken_intra_doc_links)]
 
 use std::error;
 use std::io;
