@@ -279,7 +279,7 @@ checksum = "7fcaabb2fef8c910e7f4c7ce9f67a1283a1715879a7c230ca9d6d1ae31f16d91"
 
 [[package]]
 name = "forceps"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "async-trait",
  "bson",
