@@ -383,7 +383,7 @@ impl Cache {
     ///
     /// [`evictors`]: crate::evictors
     #[inline]
-    pub async fn evict_with<E>(&self, evictor: E) -> result::Result<(), E::Err>
+    pub async fn evict_with<E>(&self, evictor: E) -> result::Result<u64, E::Err>
     where
         E: crate::evictors::Evictor,
     {

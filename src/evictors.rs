@@ -28,13 +28,15 @@ use std::cmp;
 /// impl Evictor for MyEvictor {
 ///     type Err = Box<dyn std::error::Error>;
 ///
-///     async fn evict(&self, cache: &Cache) -> Result<(), Self::Err> {
+///     async fn evict(&self, cache: &Cache) -> Result<u64, Self::Err> {
+///         let mut evicted_size = 0;
 ///         for result in cache.metadata_iter() {
 ///             let (key, meta) = result?;
 ///             cache.remove(&key).await?;
+///             evicted_size += meta.get_size();
 ///         }
 ///
-///         Ok(())
+///         Ok(evicted_size)
 ///     }
 /// }
 /// ```
@@ -45,8 +47,10 @@ pub trait Evictor {
 
     /// The method that is called to evict old or outdated items from the [`Cache`] database.
     ///
+    /// Returns the total number of bytes evicted.
+    ///
     /// See [`Evictor`] trait for more information/explanation.
-    async fn evict(&self, cache: &Cache) -> Result<(), Self::Err>;
+    async fn evict(&self, cache: &Cache) -> Result<u64, Self::Err>;
 }
 
 /// A trait for evictors that will evict items until a minimum size is met
@@ -67,7 +71,9 @@ trait MinSzEvictor {
     /// Main eviction algorithm to evict items in a [`Cache`] until a minimum size is met
     ///
     /// Configuration is done via the `batch_size` and `min_size` function implementions
-    async fn evict_to_min_size(&self, cache: &Cache) -> Result<(), ForcepError> {
+    async fn evict_to_min_size(&self, cache: &Cache) -> Result<u64, ForcepError> {
+        let mut evicted = 0;
+
         // run the evictor in a loop so if it runs out of candidates, it can just jump back and
         // look for a new set of candidates
         'evictor: loop {
@@ -90,9 +96,11 @@ trait MinSzEvictor {
                 // (pushed up the stack)
                 let meta = cache.remove(e.key()).await?;
                 total_size -= meta.get_size();
+                evicted += meta.get_size();
             }
         }
-        Ok(())
+
+        Ok(evicted)
     }
 }
 
@@ -282,7 +290,7 @@ impl MinSzEvictor for LruEvictor {
 #[async_trait]
 impl Evictor for LruEvictor {
     type Err = ForcepError;
-    async fn evict(&self, cache: &Cache) -> Result<(), Self::Err> {
+    async fn evict(&self, cache: &Cache) -> Result<u64, Self::Err> {
         self.evict_to_min_size(cache).await
     }
 }
@@ -398,7 +406,7 @@ impl MinSzEvictor for FifoEvictor {
 #[async_trait]
 impl Evictor for FifoEvictor {
     type Err = ForcepError;
-    async fn evict(&self, cache: &Cache) -> Result<(), Self::Err> {
+    async fn evict(&self, cache: &Cache) -> Result<u64, Self::Err> {
         self.evict_to_min_size(cache).await
     }
 }

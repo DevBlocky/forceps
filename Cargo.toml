@@ -1,6 +1,6 @@
 [package]
 name = "forceps"
-version = "0.3.3"
+version = "0.4.0"
 authors = ["Jacob Parker <blocckba5her@gmail.com>"]
 description = "An easy-to-use async & on-disk database"
 readme = "README.md"
@@ -8,7 +8,7 @@ repository = "https://github.com/blockba5her/forceps"
 license = "MIT"
 keywords = ["database", "cache", "async", "persistent", "disk"]
 categories = ["asynchronous", "database"]
-edition = "2018"
+edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -22,12 +22,12 @@ serde = {version = "1.0.125", features = ["derive"]}
 tokio = {version = "1.5.0", features = ["fs", "io-util"]}
 bytes = "1.0.1"
 async-trait = "0.1.50"
-lru = "0.10.0"
+lru = "0.11.0"
 parking_lot = "0.12.1"
 
 [dev-dependencies]
 tokio = {version = "1.5.0", features = ["full"]}
-criterion = {version = "0.4.0", features = ["async_tokio", "html_reports"]}
+criterion = {version = "0.5.1", features = ["async_tokio", "html_reports"]}
 
 [lib]
 path = "src/lib.rs"
