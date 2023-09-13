@@ -182,7 +182,9 @@ impl Cache {
 
         // read the metadata to reduce miss cost, since the metadata DB should generally fit in
         // memory (and also removes the need to read file metadata for a hit.)
-        let Ok(meta) = self.meta.get_metadata(k) else { return Err(ForcepError::NotFound) };
+        let Ok(meta) = self.meta.get_metadata(k) else {
+            return Err(ForcepError::NotFound);
+        };
 
         let file = {
             let path = self.path_from_key(k);
@@ -239,7 +241,7 @@ impl Cache {
         let value = value.as_ref();
 
         let (tmp, tmp_path) = tempfile(&self.opts.path).await?;
-        // write all data to a temporary file
+        // write all data to a temporary file to allow for atomic replacement and simultaneous reads.
         {
             let mut writer = tokio::io::BufWriter::with_capacity(self.opts.wbuff_sz, tmp);
             writer.write_all(value).await.map_err(ForcepError::Io)?;
