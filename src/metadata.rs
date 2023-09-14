@@ -2,8 +2,8 @@ use crate::{ForcepError, Result};
 use std::path;
 use std::time;
 
-/// Type definition for an array of bytes that make up an `md5` hash.
-pub type Md5Bytes = [u8; 16];
+/// Type definition for an array of bytes that make up an 16-byte hash (e.g., md5, xx3, etc.).
+pub type HashBytes = [u8; 16];
 
 /// Metadata information about a certain entry in the cache
 ///
@@ -38,7 +38,7 @@ pub struct Metadata {
     /// Number of times this entry has been HIT (total accesses)
     hits: u64,
     /// Md5 hash of the underlying data
-    integrity: Md5Bytes,
+    integrity: HashBytes,
 }
 
 /// Database for cache entry metadata
@@ -58,12 +58,21 @@ fn now_since_epoch() -> u64 {
 impl Metadata {
     /// Creates a new instance of [`Metadata`] from the given `data`
     pub(crate) fn new(data: &[u8]) -> Self {
+        #[cfg(feature = "md5")]
+        let hash = md5::compute(data).0;
+        #[cfg(feature = "xxhash")]
+        let hash = twox_hash::xxh3::hash128(data).to_be_bytes();
+
+        Self::new_with_hash(data, hash)
+    }
+
+    pub(crate) fn new_with_hash(data: &[u8], hash: HashBytes) -> Self {
         Self {
             size: data.len() as u64,
             last_modified: now_since_epoch(),
             last_accessed: now_since_epoch(),
             hits: 0,
-            integrity: md5::compute(data).into(),
+            integrity: hash,
         }
     }
 
@@ -199,16 +208,20 @@ impl Metadata {
         self.last_accessed
     }
 
-    /// Retrieves the internal [`Md5Bytes`] integrity of the corresponding metadata entry.
+    /// Retrieves the internal [`HashBytes`] integrity of the corresponding metadata entry.
     #[inline]
-    pub fn get_integrity(&self) -> &Md5Bytes {
+    pub fn get_integrity(&self) -> &HashBytes {
         &self.integrity
     }
 
     /// Verifies that the metadata integrity matches the integrity of the data provided.
     #[inline]
     pub fn check_integrity_of(&self, data: &[u8]) -> bool {
-        let other_integrity: Md5Bytes = md5::compute(data).into();
+        #[cfg(feature = "md5")]
+        let other_integrity: HashBytes = md5::compute(data).into();
+        #[cfg(feature = "xxhash")]
+        let other_integrity: HashBytes = twox_hash::xxh3::hash128(data).to_be_bytes();
+
         other_integrity == self.integrity
     }
 }

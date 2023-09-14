@@ -1,14 +1,21 @@
-use crate::Md5Bytes;
+use crate::HashBytes;
 use bytes::Bytes;
 use lru::LruCache;
 use parking_lot::Mutex;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-type Lru = LruCache<Md5Bytes, Bytes>;
+type Lru = LruCache<HashBytes, Bytes>;
 
+#[cfg(feature = "md5")]
 #[inline]
-fn hash_key(k: &[u8]) -> Md5Bytes {
+fn hash_key(k: &[u8]) -> HashBytes {
     md5::compute(k).into()
+}
+
+#[cfg(feature = "xxhash")]
+#[inline]
+fn hash_key(k: &[u8]) -> HashBytes {
+    twox_hash::xxh3::hash128(k).to_be_bytes()
 }
 
 #[derive(Debug)]
