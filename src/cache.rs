@@ -3,6 +3,7 @@ pub use builder::CacheBuilder;
 
 use crate::{ForcepError, MetaDb, Metadata, Result, mem_cache::MemCache};
 use bytes::Bytes;
+use sled::Db;
 use std::io;
 use std::path;
 use std::result;
@@ -114,6 +115,11 @@ impl Cache {
             mem: MemCache::new(opts.lru_size),
             opts,
         })
+    }
+
+    /// Gets a reference to the underlying meta database.
+    pub fn get_meta_db_ref(&self) -> &Db {
+        self.meta.get_db_ref()
     }
 
     /// Creates a PathBuf based on the key provided

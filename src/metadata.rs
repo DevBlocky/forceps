@@ -234,6 +234,10 @@ impl MetaDb {
             .map(|db| Self { db })
     }
 
+    pub fn get_db_ref(&self) -> &sled::Db {
+        &self.db
+    }
+
     /// Retrieves an entry in the metadata database with the corresponding key.
     pub fn get_metadata(&self, key: &[u8]) -> Result<Metadata> {
         let data = match self.db.get(key) {
