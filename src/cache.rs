@@ -180,6 +180,12 @@ impl Cache {
             return self.track_access_for(k).map(|_| val);
         }
 
+        // read the metadata to reduce miss cost, since the metadata DB should generally fit in
+        // memory (and also removes the need to read file metadata for a hit.)
+        let Ok(meta) = self.meta.get_metadata(k) else {
+            return Err(ForcepError::NotFound);
+        };
+
         let file = {
             let path = self.path_from_key(k);
             afs::OpenOptions::new()
@@ -193,8 +199,7 @@ impl Cache {
         };
 
         // create a new buffer based on the estimated size of the file
-        let size_guess = file.metadata().await.map(|x| x.len()).unwrap_or(0);
-        let mut buf = Vec::with_capacity(size_guess as usize);
+        let mut buf = Vec::with_capacity(meta.get_size() as _);
 
         // read the entire file to the buffer
         tokio::io::BufReader::with_capacity(self.opts.rbuff_sz, file)
@@ -236,7 +241,7 @@ impl Cache {
         let value = value.as_ref();
 
         let (tmp, tmp_path) = tempfile(&self.opts.path).await?;
-        // write all data to a temporary file
+        // write all data to a temporary file to allow for atomic replacement and simultaneous reads.
         {
             let mut writer = tokio::io::BufWriter::with_capacity(self.opts.wbuff_sz, tmp);
             writer.write_all(value).await.map_err(ForcepError::Io)?;

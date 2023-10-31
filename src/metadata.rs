@@ -262,13 +262,13 @@ mod test {
         let db = create_db().unwrap();
         let meta = db.insert_metadata_for(&DATA, &DATA).unwrap();
         // make sure last-modified date is within last second
-        assert!(
+        assert_eq!(
             meta.get_last_modified()
                 .unwrap()
                 .elapsed()
                 .unwrap()
-                .as_secs()
-                == 0
+                .as_secs(),
+            0
         );
     }
 
