@@ -33,7 +33,7 @@ impl MemCacheInner {
 
     fn get(&self, k: &[u8]) -> Option<Bytes> {
         let mut guard = self.cache.lock();
-        guard.get(&hash_key(k)).map(Bytes::clone)
+        guard.get(&hash_key(k)).cloned()
     }
 
     fn put(&self, k: &[u8], v: Bytes) -> Option<Bytes> {

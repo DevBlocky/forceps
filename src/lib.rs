@@ -1,13 +1,10 @@
-//! `forceps` is a crate that provides a simple and easy-to-use on-disk cache/database.
+//! `forceps` is a simple and easy-to-use on-disk cache/database for large files.
 //!
-//! **This crate is intended to be used with the [`tokio`](tokio) runtime.**
+//! **This crate is intended to be used with the [`tokio`] runtime.**
 //!
 //! `forceps` is made to be an easy-to-use, thread-safe, performant, and asynchronous disk cache
 //! that has easy reading and manipulation of data. It levereges tokio's async `fs` APIs
 //! and fast task schedulers to perform IO operations, and `sled` as a fast metadata database.
-//!
-//! It was originally designed to be used in [`scalpel`](https://github.com/blockba5her/scalpel),
-//! the MD@Home implementation for the Rust language.
 //!
 //! ## Features
 //!
@@ -25,7 +22,7 @@
 //!
 //! This database solution easily separates data into two databases: the LFS (large-file-storage)
 //! database, and the metadata database. The LFS database is powered using Tokio's async filesystem
-//! operations, whereas the metadata database is powered using [`sled`](sled).
+//! operations, whereas the metadata database is powered using [`sled`].
 //!
 //! The advantage of splitting these two up is simple: Accessing metadata (for things like database
 //! eviction) is realatively cheap and efficient, with the only downside being that `async` is not
@@ -64,9 +61,9 @@ pub enum ForcepError {
     /// An I/O operation error. This can occur on reads, writes, or builds.
     Io(io::Error),
     /// Error deserialization metadata information (most likely corrupted)
-    MetaDe(bson::de::Error),
+    MetaDe(bson::error::Error),
     /// Error serializing metadata information
-    MetaSer(bson::ser::Error),
+    MetaSer(bson::error::Error),
     /// Error with metadata sled database operation
     MetaDb(sled::Error),
     /// The entry was found successfully, but the metadata was strangely not present
@@ -83,10 +80,13 @@ impl std::fmt::Display for ForcepError {
     fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Io(e) => write!(fmt, "an I/O error occurred: {}", e),
-            Self::MetaDe(e) => write!(fmt, "there was a problem deserializing metadata: {}", e),
-            Self::MetaSer(e) => write!(fmt, "there was a problem serializing metadata: {}", e),
-            Self::MetaDb(e) => write!(fmt, "an error with the metadata database occurred: {}", e),
-            Self::MetaNotFound => write!(fmt, "the entry for the key provided was found, but the metadata was strangely not present"),
+            Self::MetaDe(e) => write!(fmt, "there was a problem deserializing metadata: {e}"),
+            Self::MetaSer(e) => write!(fmt, "there was a problem serializing metadata: {e}"),
+            Self::MetaDb(e) => write!(fmt, "an error with the metadata database occurred: {e}"),
+            Self::MetaNotFound => write!(
+                fmt,
+                "the entry for the key provided was found, but the metadata was strangely not present"
+            ),
             Self::NotFound => write!(fmt, "the entry for the key provided was not found"),
         }
     }

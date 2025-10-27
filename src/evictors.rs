@@ -1,5 +1,4 @@
 use crate::{Cache, ForcepError, Metadata};
-use async_trait::async_trait;
 use std::cmp;
 
 /// A trait that represents a structure or enum that can evict items out of a [`Cache`] instance.
@@ -24,7 +23,6 @@ use std::cmp;
 /// use forceps::{Cache, evictors::Evictor};
 /// struct MyEvictor;
 ///
-/// #[async_trait::async_trait]
 /// impl Evictor for MyEvictor {
 ///     type Err = Box<dyn std::error::Error>;
 ///
@@ -40,7 +38,6 @@ use std::cmp;
 ///     }
 /// }
 /// ```
-#[async_trait]
 pub trait Evictor {
     /// The error type that the `evict` method will produce.
     type Err;
@@ -50,13 +47,12 @@ pub trait Evictor {
     /// Returns the total number of bytes evicted.
     ///
     /// See [`Evictor`] trait for more information/explanation.
-    async fn evict(&self, cache: &Cache) -> Result<u64, Self::Err>;
+    fn evict(&self, cache: &Cache) -> impl Future<Output = Result<u64, Self::Err>>;
 }
 
 /// A trait for evictors that will evict items until a minimum size is met
 ///
 /// This trait default implements `evict_to_min_size`, and requires `batch_size` and `min_size`.
-#[async_trait]
 trait MinSzEvictor {
     type Candidate: EvictCandidate + Send + Sync;
 
@@ -80,7 +76,7 @@ trait MinSzEvictor {
             let (mut total_size, scan) =
                 find_evict_candidates::<Self::Candidate>(cache, self.batch_size())?;
             // break if there are no candidates (cache is completely empty)
-            if scan.len() <= 0 {
+            if scan.is_empty() {
                 break;
             }
 
@@ -274,7 +270,6 @@ impl LruEvictor {
         self
     }
 }
-#[async_trait]
 impl MinSzEvictor for LruEvictor {
     type Candidate = LruEc;
 
@@ -287,7 +282,6 @@ impl MinSzEvictor for LruEvictor {
         self.batch_size
     }
 }
-#[async_trait]
 impl Evictor for LruEvictor {
     type Err = ForcepError;
     async fn evict(&self, cache: &Cache) -> Result<u64, Self::Err> {
@@ -390,7 +384,6 @@ impl FifoEvictor {
         self
     }
 }
-#[async_trait]
 impl MinSzEvictor for FifoEvictor {
     type Candidate = FifoEc;
 
@@ -403,7 +396,6 @@ impl MinSzEvictor for FifoEvictor {
         self.batch_size
     }
 }
-#[async_trait]
 impl Evictor for FifoEvictor {
     type Err = ForcepError;
     async fn evict(&self, cache: &Cache) -> Result<u64, Self::Err> {

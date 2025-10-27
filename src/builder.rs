@@ -1,6 +1,6 @@
 use crate::{
-    cache::{Cache, Options},
     Result,
+    cache::{Cache, Options},
 };
 use std::path;
 

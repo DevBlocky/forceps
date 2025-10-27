@@ -1,7 +1,5 @@
-use criterion::{criterion_group, BenchmarkId, Criterion};
+use criterion::{BenchmarkId, Criterion, criterion_group};
 use rand::prelude::*;
-use std::cell::UnsafeCell;
-use std::thread_local;
 
 fn make_executor_custom<F: FnOnce() -> forceps::CacheBuilder>(
     f: F,
@@ -19,12 +17,8 @@ fn make_executor() -> (forceps::Cache, tokio::runtime::Runtime) {
 }
 
 fn random_bytes(size: usize) -> Vec<u8> {
-    std::thread_local! {
-        static RNG: UnsafeCell<SmallRng> = UnsafeCell::new(SmallRng::from_entropy());
-    }
-
     let mut buf = vec![0u8; size];
-    RNG.with(|rng| unsafe { (&mut *rng.get()).fill_bytes(&mut buf) });
+    rand::rng().fill_bytes(&mut buf);
     buf
 }
 

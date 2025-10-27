@@ -1,4 +1,4 @@
-use crate::{mem_cache::MemCache, ForcepError, MetaDb, Metadata, Result};
+use crate::{ForcepError, MetaDb, Metadata, Result, mem_cache::MemCache};
 use bytes::Bytes;
 use std::io;
 use std::path;
@@ -182,9 +182,7 @@ impl Cache {
 
         // read the metadata to reduce miss cost, since the metadata DB should generally fit in
         // memory (and also removes the need to read file metadata for a hit.)
-        let Ok(meta) = self.meta.get_metadata(k) else {
-            return Err(ForcepError::NotFound);
-        };
+        let meta = self.meta.get_metadata(k)?;
 
         let file = {
             let path = self.path_from_key(k);

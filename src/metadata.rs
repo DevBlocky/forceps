@@ -1,5 +1,4 @@
 use crate::{ForcepError, Result};
-use std::io;
 use std::path;
 use std::time;
 
@@ -70,25 +69,12 @@ impl Metadata {
 
     /// Serializes the metadata into bytes
     pub(crate) fn serialize(&self) -> Result<Vec<u8>> {
-        let document = bson::to_document(self).map_err(ForcepError::MetaSer)?;
-
-        // write document contents to memory stream
-        let mut buf = Vec::<u8>::new();
-        let mut writer = io::Cursor::new(&mut buf);
-        document
-            .to_writer(&mut writer)
-            .map_err(ForcepError::MetaSer)?;
-
-        Ok(buf)
+        bson::serialize_to_vec(self).map_err(ForcepError::MetaSer)
     }
 
     /// Deserializes a slice of bytes into metadata
     pub(crate) fn deserialize(buf: &[u8]) -> Result<Self> {
-        // create a reader so we can convert the document
-        let mut cursor = io::Cursor::new(buf);
-        let document = bson::Document::from_reader(&mut cursor).map_err(ForcepError::MetaDe)?;
-
-        bson::from_document(document).map_err(ForcepError::MetaDe)
+        bson::deserialize_from_slice(buf).map_err(ForcepError::MetaDe)
     }
 
     /// The size in bytes of the corresponding cache entry.
@@ -98,6 +84,7 @@ impl Metadata {
     }
 
     /// Retrives the last time this entry was modified.
+    #[inline]
     pub fn get_last_modified(&self) -> Option<time::SystemTime> {
         match self.last_modified {
             0 => None,
@@ -129,6 +116,7 @@ impl Metadata {
     ///
     /// [`get_last_modified`]: Self::get_last_modified
     /// [`CacheBuilder`]: crate::CacheBuilder
+    #[inline]
     pub fn get_last_acccessed(&self) -> Option<time::SystemTime> {
         match self.last_accessed {
             0 => None,
