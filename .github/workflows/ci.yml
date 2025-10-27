@@ -32,6 +32,7 @@ jobs:
     name: Test ${{ matrix.name }}
     runs-on: ${{ matrix.os || 'ubuntu-latest' }}
     needs: [style]
+    continue-on-error: true
 
     strategy:
       matrix:

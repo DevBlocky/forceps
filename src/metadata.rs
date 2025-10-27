@@ -27,7 +27,7 @@ pub type Md5Bytes = [u8; 16];
 /// let metadata = cache.read_metadata(&b"MY_KEY").unwrap();
 /// # }
 /// ```
-#[derive(Debug, serde::Deserialize, serde::Serialize)]
+#[derive(Debug)]
 pub struct Metadata {
     /// Size in bytes of the corresponding entry
     size: u64,
@@ -68,13 +68,75 @@ impl Metadata {
     }
 
     /// Serializes the metadata into bytes
-    pub(crate) fn serialize(&self) -> Result<Vec<u8>> {
-        bson::serialize_to_vec(self).map_err(ForcepError::MetaSer)
+    pub(crate) fn serialize(&self) -> Vec<u8> {
+        use bson::{
+            cstr,
+            raw::{RawBinaryRef, RawBson, RawDocumentBuf},
+        };
+
+        let mut doc = RawDocumentBuf::new();
+        doc.append(cstr!("size"), RawBson::Int64(self.size as i64));
+        doc.append(
+            cstr!("last_modified"),
+            RawBson::Int64(self.last_modified as i64),
+        );
+        doc.append(
+            cstr!("last_accessed"),
+            RawBson::Int64(self.last_accessed as i64),
+        );
+        doc.append(cstr!("hits"), RawBson::Int64(self.hits as i64));
+        doc.append(
+            cstr!("integrity"),
+            RawBinaryRef {
+                subtype: bson::spec::BinarySubtype::Md5,
+                bytes: &self.integrity,
+            },
+        );
+        doc.into_bytes()
     }
 
     /// Deserializes a slice of bytes into metadata
     pub(crate) fn deserialize(buf: &[u8]) -> Result<Self> {
-        bson::deserialize_from_slice(buf).map_err(ForcepError::MetaDe)
+        use bson::{error::Error as BsonError, raw::RawDocument, spec::BinarySubtype};
+
+        let doc = RawDocument::from_bytes(buf).map_err(ForcepError::MetaDe)?;
+
+        let make_error = |key: &str, msg: &str| -> ForcepError {
+            let io_err = std::io::Error::new(std::io::ErrorKind::InvalidData, msg.to_owned());
+            let mut err = BsonError::from(io_err);
+            err.key = Some(key.to_owned());
+            ForcepError::MetaDe(err)
+        };
+
+        let read_u64 = |key: &str| -> Result<u64> {
+            doc.get_i64(key)
+                .map(|v| v as u64)
+                .map_err(ForcepError::MetaDe)
+        };
+
+        let size = read_u64("size")?;
+        let last_modified = read_u64("last_modified")?;
+        let last_accessed = read_u64("last_accessed")?;
+        let hits = read_u64("hits")?;
+
+        let binary = doc.get_binary("integrity").map_err(ForcepError::MetaDe)?;
+        if binary.subtype != BinarySubtype::Md5 {
+            return Err(make_error("integrity", "expected MD5 binary subtype"));
+        }
+        const MD5_LEN: usize = 16;
+        if binary.bytes.len() != MD5_LEN {
+            return Err(make_error("integrity", "integrity must contain 16 bytes"));
+        }
+        let mut integrity = [0u8; MD5_LEN];
+        integrity.copy_from_slice(binary.bytes);
+
+        Ok(Self {
+            size,
+            last_modified,
+            last_accessed,
+            hits,
+            integrity,
+        })
     }
 
     /// The size in bytes of the corresponding cache entry.
@@ -174,7 +236,7 @@ impl MetaDb {
     /// If a previous entry exists, it is simply overwritten.
     pub fn insert_metadata_for(&self, key: &[u8], data: &[u8]) -> Result<Metadata> {
         let meta = Metadata::new(data);
-        let bytes = Metadata::serialize(&meta)?;
+        let bytes = Metadata::serialize(&meta);
         self.db
             .insert(key, &bytes[..])
             .map_err(ForcepError::MetaDb)?;
@@ -200,7 +262,7 @@ impl MetaDb {
         meta.last_accessed = now_since_epoch();
         meta.hits += 1;
         self.db
-            .insert(key, Metadata::serialize(&meta)?)
+            .insert(key, Metadata::serialize(&meta))
             .map_err(ForcepError::MetaDb)?;
         Ok(meta)
     }
@@ -264,7 +326,7 @@ mod test {
     fn metadata_ser_de() {
         let db = create_db().unwrap();
         let meta = db.insert_metadata_for(&DATA, &DATA).unwrap();
-        let ser_bytes = meta.serialize().unwrap();
+        let ser_bytes = meta.serialize();
         let de = Metadata::deserialize(&ser_bytes).unwrap();
         assert_eq!(meta.get_integrity(), de.get_integrity());
     }

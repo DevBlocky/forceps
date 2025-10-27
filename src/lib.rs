@@ -107,11 +107,8 @@ impl error::Error for ForcepError {
 mod mem_cache;
 mod tmp;
 
-mod builder;
-pub use builder::CacheBuilder;
-
 mod cache;
-pub use cache::Cache;
+pub use cache::{Cache, CacheBuilder};
 
 mod metadata;
 pub(crate) use metadata::MetaDb;

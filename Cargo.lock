@@ -94,7 +94,6 @@ dependencies = [
  "js-sys",
  "once_cell",
  "rand",
- "serde",
  "serde_bytes",
  "simdutf8",
  "thiserror",
@@ -297,7 +296,6 @@ dependencies = [
  "md5",
  "parking_lot 0.12.5",
  "rand",
- "serde",
  "sled",
  "tokio",
 ]

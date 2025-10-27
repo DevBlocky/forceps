@@ -1,3 +1,6 @@
+mod builder;
+pub use builder::CacheBuilder;
+
 use crate::{ForcepError, MetaDb, Metadata, Result, mem_cache::MemCache};
 use bytes::Bytes;
 use std::io;
@@ -20,17 +23,17 @@ async fn tempfile(dir: &path::Path) -> Result<(afs::File, path::PathBuf)> {
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct Options {
-    pub(crate) path: path::PathBuf,
-    pub(crate) dir_depth: u8,
-    pub(crate) track_access: bool,
+struct Options {
+    path: path::PathBuf,
+    dir_depth: u8,
+    track_access: bool,
 
     // maximum size of the in-memory lru in bytes
-    pub(crate) lru_size: usize,
+    lru_size: usize,
 
     // read and write buffer sizes
-    pub(crate) rbuff_sz: usize,
-    pub(crate) wbuff_sz: usize,
+    rbuff_sz: usize,
+    wbuff_sz: usize,
 }
 
 /// The main component of `forceps`, and  acts as the API for interacting with the on-disk cache.
@@ -93,12 +96,12 @@ impl Cache {
     /// ```
     #[inline]
     #[allow(clippy::new_ret_no_self)]
-    pub fn new<P: AsRef<path::Path>>(path: P) -> crate::CacheBuilder {
-        crate::CacheBuilder::new(path)
+    pub fn new<P: AsRef<path::Path>>(path: P) -> CacheBuilder {
+        CacheBuilder::new(path)
     }
 
     /// Creates a new Cache instance based on the CacheBuilder
-    pub(crate) async fn create(opts: Options) -> Result<Self> {
+    async fn create(opts: Options) -> Result<Self> {
         // create the base directory for the cache
         afs::create_dir_all(&opts.path)
             .await

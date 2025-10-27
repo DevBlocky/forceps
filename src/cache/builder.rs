@@ -1,10 +1,7 @@
-use crate::{
-    Result,
-    cache::{Cache, Options},
-};
+use crate::Result;
 use std::path;
 
-/// A builder for the [`Cache`] object. Exposes APIs for configuring the initial setup of the
+/// A builder for the [`Cache`](super::Cache) object. Exposes APIs for configuring the initial setup of the
 /// database.
 ///
 /// # Examples
@@ -24,11 +21,11 @@ use std::path;
 /// ```
 #[derive(Debug, Clone)]
 pub struct CacheBuilder {
-    opts: Options,
+    opts: super::Options,
 }
 
 impl CacheBuilder {
-    /// Creates a new [`CacheBuilder`], which can be used to customize and create a [`Cache`]
+    /// Creates a new [`CacheBuilder`], which can be used to customize and create a [`Cache`](super::Cache)
     /// instance.
     ///
     /// The `path` supplied is the base directory of the cache instance.
@@ -42,7 +39,7 @@ impl CacheBuilder {
     /// // Use other methods for configuration
     /// ```
     pub fn new<P: AsRef<path::Path>>(path: P) -> Self {
-        let opts = Options {
+        let opts = super::Options {
             path: path.as_ref().to_owned(),
             dir_depth: 2,
             track_access: false,
@@ -109,7 +106,7 @@ impl CacheBuilder {
         self
     }
 
-    /// Builds the new [`Cache`] instance using the configured options of the builder.
+    /// Builds the new [`Cache`](super::Cache) instance using the configured options of the builder.
     ///
     /// # Examples
     ///
@@ -124,8 +121,8 @@ impl CacheBuilder {
     ///     .unwrap();
     /// # }
     /// ```
-    pub async fn build(self) -> Result<Cache> {
-        Cache::create(self.opts).await
+    pub async fn build(self) -> Result<super::Cache> {
+        super::Cache::create(self.opts).await
     }
 }
 

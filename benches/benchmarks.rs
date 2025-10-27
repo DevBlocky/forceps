@@ -1,19 +1,27 @@
-use criterion::{BenchmarkId, Criterion, criterion_group};
+use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
 use rand::prelude::*;
+
+const CACHE_DIRECTORY: &str = "cache";
 
 fn make_executor_custom<F: FnOnce() -> forceps::CacheBuilder>(
     f: F,
 ) -> (forceps::Cache, tokio::runtime::Runtime) {
+    use std::{fs, io};
+
+    match fs::remove_dir_all(CACHE_DIRECTORY) {
+        Err(e) if e.kind() != io::ErrorKind::NotFound => panic!("{e}"),
+        _ => {}
+    }
+
     let rt = tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()
         .unwrap();
-
     let cache = rt.block_on(async move { f().build().await.unwrap() });
     (cache, rt)
 }
 fn make_executor() -> (forceps::Cache, tokio::runtime::Runtime) {
-    make_executor_custom(|| forceps::CacheBuilder::default())
+    make_executor_custom(|| forceps::CacheBuilder::new(CACHE_DIRECTORY))
 }
 
 fn random_bytes(size: usize) -> Vec<u8> {
@@ -60,7 +68,7 @@ pub fn cache_read_const_key(c: &mut Criterion) {
             &tracking,
             move |b, &tracking| {
                 let (db, rt) = make_executor_custom(|| {
-                    forceps::CacheBuilder::default().track_access(tracking)
+                    forceps::CacheBuilder::new(CACHE_DIRECTORY).track_access(tracking)
                 });
                 const KEY: [u8; 4] = [0xDE, 0xAD, 0xBE, 0xEF];
                 let value = random_bytes(VALUE_SZ);
@@ -78,6 +86,7 @@ pub fn cache_read_const_key(c: &mut Criterion) {
 
 pub fn cache_remove_const_key(c: &mut Criterion) {
     c.bench_function("cache::remove_const_key", move |b| {
+        std::fs::remove_dir_all("./cache").unwrap();
         let (db, rt) = make_executor();
         const KEY: [u8; 4] = [0xDE, 0xAD, 0xBE, 0xEF];
         let value = random_bytes(VALUE_SZ);
@@ -104,23 +113,32 @@ pub fn cache_metadata_lookup(c: &mut Criterion) {
     });
 }
 
-criterion_group!(
-    benches,
-    cache_write_const_key,
-    cache_write_random_key,
-    cache_read_const_key,
-    cache_remove_const_key,
-    cache_metadata_lookup
-);
-
-fn main() {
-    // delete cache directory if it exists
-    // this is to make sure we're benching on a clean slate
-    if let Ok(_) = std::fs::read_dir("./cache") {
-        std::fs::remove_dir_all("./cache").unwrap();
-    }
-
-    benches();
-
-    Criterion::default().configure_from_args().final_summary();
+fn bench_config() -> Criterion {
+    Criterion::default()
+        .measurement_time(std::time::Duration::from_secs(10))
+        .configure_from_args()
 }
+
+criterion_group! {
+    name = benches;
+    config = bench_config();
+    targets =
+        cache_write_const_key,
+        cache_write_random_key,
+        cache_read_const_key,
+        cache_remove_const_key,
+        cache_metadata_lookup
+}
+
+criterion_main!(benches);
+// fn main() {
+//     // delete cache directory if it exists
+//     // this is to make sure we're benching on a clean slate
+//     if let Ok(_) = std::fs::read_dir("./cache") {
+//         std::fs::remove_dir_all("./cache").unwrap();
+//     }
+
+//     benches();
+
+//     Criterion::default().configure_from_args().final_summary();
+// }
