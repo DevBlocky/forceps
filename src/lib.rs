@@ -65,7 +65,7 @@ pub enum ForcepError {
     /// Error serializing metadata information
     MetaSer(bson::error::Error),
     /// Error with metadata sled database operation
-    MetaDb(sled::Error),
+    MetaDb(feoxdb::FeoxError),
     /// The entry was found successfully, but the metadata was strangely not present
     MetaNotFound,
     /// The entry for the specified key is not found

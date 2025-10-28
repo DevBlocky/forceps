@@ -41,12 +41,6 @@ pub struct Metadata {
     integrity: Md5Bytes,
 }
 
-/// Database for cache entry metadata
-#[derive(Debug)]
-pub(crate) struct MetaDb {
-    db: sled::Db,
-}
-
 /// Milliseconds from epoch to now
 fn now_since_epoch() -> u64 {
     time::SystemTime::now()
@@ -213,19 +207,26 @@ impl Metadata {
     }
 }
 
+/// Database for cache entry metadata
+pub(crate) struct MetaDb {
+    db: feoxdb::FeoxStore,
+}
+
 impl MetaDb {
     /// Initializes a new metadata database with sled.
     pub fn new(path: &path::Path) -> Result<Self> {
-        sled::open(path)
-            .map_err(ForcepError::MetaDb)
-            .map(|db| Self { db })
+        let db = feoxdb::FeoxStore::builder()
+            .device_path(path.to_string_lossy())
+            .build()
+            .map_err(ForcepError::MetaDb)?;
+        Ok(Self { db })
     }
 
     /// Retrieves an entry in the metadata database with the corresponding key.
     pub fn get_metadata(&self, key: &[u8]) -> Result<Metadata> {
-        let data = match self.db.get(key) {
-            Ok(Some(data)) => data,
-            Ok(None) => return Err(ForcepError::MetaNotFound),
+        let data = match self.db.get_bytes(key) {
+            Ok(data) => data,
+            Err(feoxdb::FeoxError::KeyNotFound) => return Err(ForcepError::MetaNotFound),
             Err(e) => return Err(ForcepError::MetaDb(e)),
         };
         Metadata::deserialize(&data)
@@ -244,35 +245,44 @@ impl MetaDb {
     }
 
     pub fn remove_metadata_for(&self, key: &[u8]) -> Result<Metadata> {
-        match self.db.remove(key) {
-            Ok(Some(m)) => Metadata::deserialize(&m[..]),
-            Ok(None) => Err(ForcepError::MetaNotFound),
-            Err(e) => Err(ForcepError::MetaDb(e)),
-        }
+        let meta = match self.db.get_bytes(key) {
+            Ok(data) => Metadata::deserialize(&data)?,
+            Err(feoxdb::FeoxError::KeyNotFound) => return Err(ForcepError::MetaNotFound),
+            Err(e) => return Err(ForcepError::MetaDb(e)),
+        };
+        self.db.delete(key).map_err(ForcepError::MetaDb)?;
+        Ok(meta)
     }
 
     /// Will increment the `hits` counter and set the `last_accessed` value to now for the found
     /// metadata key.
     pub fn track_access_for(&self, key: &[u8]) -> Result<Metadata> {
-        let mut meta = match self.db.get(key) {
-            Ok(Some(entry)) => Metadata::deserialize(&entry[..])?,
+        let mut meta = match self.db.get_bytes(key) {
+            Ok(data) => Metadata::deserialize(&data)?,
+            Err(feoxdb::FeoxError::KeyNotFound) => return Err(ForcepError::MetaNotFound),
             Err(e) => return Err(ForcepError::MetaDb(e)),
-            Ok(None) => return Err(ForcepError::MetaNotFound),
         };
         meta.last_accessed = now_since_epoch();
         meta.hits += 1;
         self.db
-            .insert(key, Metadata::serialize(&meta))
+            .insert(key, &Metadata::serialize(&meta))
             .map_err(ForcepError::MetaDb)?;
         Ok(meta)
     }
 
     /// Iterator over the entire metadata database
     pub fn metadata_iter(&self) -> impl Iterator<Item = Result<(Vec<u8>, Metadata)>> {
-        self.db.iter().map(|x| match x {
-            Ok((key, data)) => Metadata::deserialize(&data[..]).map(|m| (key.to_vec(), m)),
-            Err(e) => Err(ForcepError::MetaDb(e)),
-        })
+        vec![].into_iter()
+        // self.db.iter().map(|x| match x {
+        //     Ok((key, data)) => Metadata::deserialize(&data[..]).map(|m| (key.to_vec(), m)),
+        //     Err(e) => Err(ForcepError::MetaDb(e)),
+        // })
+    }
+}
+
+impl std::fmt::Debug for MetaDb {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "FeOxDb metadata database")
     }
 }
 
