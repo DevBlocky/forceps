@@ -137,9 +137,9 @@ impl Cache {
 
     /// Tracks the access for a cache entry if the option is enabled
     #[inline]
-    fn track_access_for(&self, k: &[u8]) -> Result<()> {
+    fn track_access_for(&self, k: &[u8], meta: Metadata) -> Result<()> {
         if self.opts.track_access {
-            self.meta.track_access_for(k)?;
+            self.meta.track_access_for(k, Some(meta))?;
         }
         Ok(())
     }
@@ -149,7 +149,7 @@ impl Cache {
     /// # Not Found
     ///
     /// If the entry is not found, then it will return
-    /// `Err(`[`Error::NotFound`](ForcepError::NotFound)`)`.
+    /// `Err(`[`ForcepError::NotFound`]`)`.
     ///
     /// # Metadata
     ///
@@ -178,14 +178,14 @@ impl Cache {
         use tokio::io::AsyncReadExt;
         let k = key.as_ref();
 
-        // look in the memory cache to see if it's there and return if it is
-        if let Some(val) = self.mem.get(k) {
-            return self.track_access_for(k).map(|_| val);
-        }
-
         // read the metadata to reduce miss cost, since the metadata DB should generally fit in
         // memory (and also removes the need to read file metadata for a hit.)
         let meta = self.meta.get_metadata(k)?;
+
+        // look in the memory cache to see if it's there and return if it is
+        if let Some(val) = self.mem.get(k) {
+            return self.track_access_for(k, meta).map(|_| val);
+        }
 
         let file = {
             let path = self.path_from_key(k);
@@ -208,7 +208,7 @@ impl Cache {
             .await
             .map_err(ForcepError::Io)?;
 
-        self.track_access_for(k)?;
+        self.track_access_for(k, meta)?;
         let bytes = Bytes::from(buf);
         self.mem.put(k, Bytes::clone(&bytes));
         Ok(bytes)

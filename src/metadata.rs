@@ -253,11 +253,17 @@ impl MetaDb {
 
     /// Will increment the `hits` counter and set the `last_accessed` value to now for the found
     /// metadata key.
-    pub fn track_access_for(&self, key: &[u8]) -> Result<Metadata> {
-        let mut meta = match self.db.get(key) {
-            Ok(Some(entry)) => Metadata::deserialize(&entry[..])?,
-            Err(e) => return Err(ForcepError::MetaDb(e)),
-            Ok(None) => return Err(ForcepError::MetaNotFound),
+    pub fn track_access_for(&self, key: &[u8], existing: Option<Metadata>) -> Result<Metadata> {
+        let mut meta = match existing {
+            Some(existing) => existing,
+            None => {
+                let entry = self
+                    .db
+                    .get(key)
+                    .map_err(ForcepError::MetaDb)?
+                    .ok_or(ForcepError::MetaNotFound)?;
+                Metadata::deserialize(&entry[..])?
+            }
         };
         meta.last_accessed = now_since_epoch();
         meta.hits += 1;
