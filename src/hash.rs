@@ -1,5 +1,7 @@
+pub(crate) const HASH_LEN: usize = 16;
+
 /// Type definition for an array of bytes that make up an 16-byte hash (e.g., md5, xx3, etc.).
-pub type HashBytes = [u8; 16];
+pub type HashBytes = [u8; HASH_LEN];
 
 #[inline]
 pub fn create(data: &[u8]) -> HashBytes {

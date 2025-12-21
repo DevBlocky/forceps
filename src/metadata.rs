@@ -5,7 +5,7 @@ use std::time;
 /// Metadata information about a certain entry in the cache
 ///
 /// This metadata contains information about when the entry was last modified, the size (in bytes)
-/// of the entry, the `md5` integrity of the entry, etc.
+/// of the entry, the hash integrity of the entry, etc.
 ///
 /// # Examples
 ///
@@ -34,7 +34,7 @@ pub struct Metadata {
     last_accessed: u64,
     /// Number of times this entry has been HIT (total accesses)
     hits: u64,
-    /// Md5 hash of the underlying data
+    /// Hash of the underlying data
     integrity: HashBytes,
 }
 
@@ -89,7 +89,7 @@ impl Metadata {
         doc.append(
             cstr!("integrity"),
             RawBinaryRef {
-                subtype: bson::spec::BinarySubtype::Md5,
+                subtype: bson::spec::BinarySubtype::Generic,
                 bytes: &self.integrity,
             },
         );
@@ -121,14 +121,13 @@ impl Metadata {
         let hits = read_u64("hits")?;
 
         let binary = doc.get_binary("integrity").map_err(ForcepError::MetaDe)?;
-        if binary.subtype != BinarySubtype::Md5 {
-            return Err(make_error("integrity", "expected MD5 binary subtype"));
+        if binary.subtype != BinarySubtype::Generic {
+            return Err(make_error("integrity", "expected generic binary subtype"));
         }
-        const MD5_LEN: usize = 16;
-        if binary.bytes.len() != MD5_LEN {
-            return Err(make_error("integrity", "integrity must contain 16 bytes"));
+        if binary.bytes.len() != crate::hash::HASH_LEN {
+            return Err(make_error("integrity", "integrity must contain HASH_LEN bytes"));
         }
-        let mut integrity = [0u8; MD5_LEN];
+        let mut integrity: HashBytes = [0u8; crate::hash::HASH_LEN];
         integrity.copy_from_slice(binary.bytes);
 
         Ok(Self {
