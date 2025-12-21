@@ -1,4 +1,4 @@
-use crate::{ForcepError, Result, HashBytes};
+use crate::{ForcepError, HashBytes, Result};
 use std::path;
 use std::time;
 
@@ -125,7 +125,10 @@ impl Metadata {
             return Err(make_error("integrity", "expected generic binary subtype"));
         }
         if binary.bytes.len() != crate::hash::HASH_LEN {
-            return Err(make_error("integrity", "integrity must contain HASH_LEN bytes"));
+            return Err(make_error(
+                "integrity",
+                "integrity must contain HASH_LEN bytes",
+            ));
         }
         let mut integrity: HashBytes = [0u8; crate::hash::HASH_LEN];
         integrity.copy_from_slice(binary.bytes);
