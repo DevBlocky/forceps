@@ -6,18 +6,6 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 type Lru = LruCache<HashBytes, Bytes>;
 
-#[cfg(feature = "md5")]
-#[inline]
-fn hash_key(k: &[u8]) -> HashBytes {
-    md5::compute(k).into()
-}
-
-#[cfg(feature = "xxhash")]
-#[inline]
-fn hash_key(k: &[u8]) -> HashBytes {
-    twox_hash::xxh3::hash128(k).to_be_bytes()
-}
-
 #[derive(Debug)]
 struct MemCacheInner {
     cache: Mutex<Lru>,
@@ -40,13 +28,13 @@ impl MemCacheInner {
 
     fn get(&self, k: &[u8]) -> Option<Bytes> {
         let mut guard = self.cache.lock();
-        guard.get(&hash_key(k)).cloned()
+        guard.get(&crate::hash::create(k)).cloned()
     }
 
     fn put(&self, k: &[u8], v: Bytes) -> Option<Bytes> {
         let mut guard = self.cache.lock();
         let v_sz = v.len();
-        let other = guard.put(hash_key(k), v);
+        let other = guard.put(crate::hash::create(k), v);
 
         // sub the last value and add the new one to the total bytes counter
         if let Some(ref other) = other {
@@ -80,7 +68,7 @@ impl MemCacheInner {
     #[cfg(test)]
     fn peek(&self, k: &[u8]) -> Option<Bytes> {
         let guard = self.cache.lock();
-        guard.peek(&hash_key(k)).map(Bytes::clone)
+        guard.peek(&crate::hash::create(k)).map(Bytes::clone)
     }
 }
 

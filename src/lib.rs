@@ -51,9 +51,6 @@
 #![warn(missing_docs)]
 #![warn(rustdoc::broken_intra_doc_links)]
 
-#[cfg(all(feature = "md5", feature = "xxhash"))]
-compile_error!("feature \"md5\" and feature \"xxhash\" cannot be enabled at the same time");
-
 use std::error;
 use std::io;
 
@@ -110,12 +107,15 @@ impl error::Error for ForcepError {
 mod mem_cache;
 mod tmp;
 
+mod hash;
+pub use hash::HashBytes;
+
 mod cache;
 pub use cache::{Cache, CacheBuilder};
 
 mod metadata;
 pub(crate) use metadata::MetaDb;
-pub use metadata::{HashBytes, Metadata};
+pub use metadata::Metadata;
 
 /// A collection of [`Cache`] eviction algorithms and generics
 ///
