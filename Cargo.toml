@@ -1,6 +1,6 @@
 [package]
 name = "forceps"
-version = "0.4.1"
+version = "0.5.0"
 authors = ["Jacob Parker <blocckba5her@gmail.com>"]
 description = "An easy-to-use async large file database/cache"
 readme = "README.md"
