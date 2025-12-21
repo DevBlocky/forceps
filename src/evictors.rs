@@ -274,12 +274,12 @@ impl MinSzEvictor for LruEvictor {
     type Candidate = LruEc;
 
     #[inline]
-    fn min_size(&self) -> u64 {
-        self.min_sz
-    }
-    #[inline]
     fn batch_size(&self) -> usize {
         self.batch_size
+    }
+    #[inline]
+    fn min_size(&self) -> u64 {
+        self.min_sz
     }
 }
 impl Evictor for LruEvictor {
